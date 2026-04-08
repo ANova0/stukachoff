@@ -190,7 +190,7 @@ fun CheckCard(check: CheckResult.Fixable, onLearnMore: (String) -> Unit) {
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                if (check.harmSeverity == HarmSeverity.CRITICAL) {
+                if (check.harmSeverity == HarmSeverity.CRITICAL && check.status == CheckStatus.RED) {
                     Surface(
                         color = Color(0xFFF44336),
                         shape = RoundedCornerShape(4.dp)
