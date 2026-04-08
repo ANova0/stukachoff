@@ -19,18 +19,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    flavorDimensions += "network"
-    productFlavors {
-        create("core") {
-            dimension = "network"
-            applicationIdSuffix = ".core"
-            versionNameSuffix = "-core"
-        }
-        create("full") {
-            dimension = "network"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -84,8 +72,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    // Только для full flavor
-    "fullImplementation"(libs.okhttp)
+    implementation(libs.okhttp)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

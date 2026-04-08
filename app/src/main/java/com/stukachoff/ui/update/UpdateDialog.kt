@@ -117,15 +117,15 @@ fun UpdateDialog(
             )
         }
 
-        is UpdateUiState.NoInternet -> {
-            // Core flavor — нет INTERNET
+        is UpdateUiState.NoNetwork -> {
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Проверка обновлений") },
+                title = { Text("Режим приватности включён") },
                 text = {
                     Text(
-                        "Core-версия не имеет разрешения на интернет — это гарантирует что данные не утекают.\n\n" +
-                        "Проверь наличие обновлений вручную на GitHub."
+                        "Сетевые запросы отключены в настройках.\n\n" +
+                        "Включи «Сетевой режим» в Меню → Настройки чтобы проверять " +
+                        "обновления автоматически, или открой GitHub вручную."
                     )
                 },
                 confirmButton = {

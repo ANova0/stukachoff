@@ -19,7 +19,7 @@ sealed class UpdateUiState {
     object Idle : UpdateUiState()
     object Checking : UpdateUiState()
     object UpToDate : UpdateUiState()
-    object NoInternet : UpdateUiState()                     // core flavor
+    object NoNetwork : UpdateUiState()                      // режим приватности включён
     data class UpdateAvailable(val release: ReleaseInfo) : UpdateUiState()
     data class Downloading(val progress: Int) : UpdateUiState()
     data class Verifying(val message: String) : UpdateUiState()
@@ -43,7 +43,7 @@ class UpdateViewModel @Inject constructor(
             _state.value = when (val result = updateChecker.check()) {
                 is UpdateCheckResult.UpdateAvailable -> UpdateUiState.UpdateAvailable(result.release)
                 is UpdateCheckResult.UpToDate        -> UpdateUiState.UpToDate
-                is UpdateCheckResult.NoInternet      -> UpdateUiState.NoInternet
+                is UpdateCheckResult.NoNetwork       -> UpdateUiState.NoNetwork
                 is UpdateCheckResult.Error           -> UpdateUiState.Error(result.message)
             }
         }
