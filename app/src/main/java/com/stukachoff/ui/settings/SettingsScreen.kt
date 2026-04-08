@@ -6,25 +6,68 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.stukachoff.BuildConfig
+import com.stukachoff.ui.update.UpdateDialog
+import com.stukachoff.ui.update.UpdateUiState
+import com.stukachoff.ui.update.UpdateViewModel
 
 @Composable
-fun SettingsScreen(onOpenOnboarding: () -> Unit) {
+fun SettingsScreen(
+    onOpenOnboarding: () -> Unit,
+    updateViewModel: UpdateViewModel = hiltViewModel()
+) {
+    val updateState by updateViewModel.state.collectAsState()
+    var showUpdateDialog by remember { mutableStateOf(false) }
+
+    // Показываем диалог обновления при любом не-Idle состоянии
+    LaunchedEffect(updateState) {
+        if (updateState !is UpdateUiState.Idle) showUpdateDialog = true
+    }
+
+    if (showUpdateDialog && updateState !is UpdateUiState.Idle) {
+        UpdateDialog(
+            state           = updateState,
+            onCheckUpdates  = { updateViewModel.checkForUpdates() },
+            onDownloadInstall = {
+                val release = (updateState as? UpdateUiState.UpdateAvailable)?.release
+                release?.let { updateViewModel.downloadAndInstall(it) }
+            },
+            onInstall = {
+                val file = (updateState as? UpdateUiState.ReadyToInstall)?.apkFile
+                file?.let { updateViewModel.installApk(it) }
+            },
+            onOpenGitHub = { updateViewModel.openGitHubReleases() },
+            onDismiss    = { showUpdateDialog = false }
+        )
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Меню",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                Text("Меню", style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold)
+            }
+        }
+
+        item {
+            SettingsSection(title = "Обновления") {
+                SettingsItem(
+                    icon     = Icons.Default.Refresh,
+                    title    = "Проверить обновления",
+                    subtitle = "Текущая версия ${BuildConfig.VERSION_NAME}",
+                    onClick  = {
+                        showUpdateDialog = true
+                        updateViewModel.checkForUpdates()
+                    }
                 )
             }
         }
@@ -32,16 +75,16 @@ fun SettingsScreen(onOpenOnboarding: () -> Unit) {
         item {
             SettingsSection(title = "Справка") {
                 SettingsItem(
-                    icon = Icons.Default.PlayArrow,
-                    title = "Как работает приложение",
+                    icon     = Icons.Default.PlayArrow,
+                    title    = "Как работает приложение",
                     subtitle = "Повторный просмотр онбординга",
-                    onClick = onOpenOnboarding
+                    onClick  = onOpenOnboarding
                 )
                 SettingsItem(
-                    icon = Icons.Default.Info,
-                    title = "О приложении",
-                    subtitle = "Версия ${BuildConfig.VERSION_NAME}",
-                    onClick = {}
+                    icon     = Icons.Default.Info,
+                    title    = "О приложении",
+                    subtitle = "Версия ${BuildConfig.VERSION_NAME} · Open Source",
+                    onClick  = {}
                 )
             }
         }
@@ -49,19 +92,20 @@ fun SettingsScreen(onOpenOnboarding: () -> Unit) {
         item {
             SettingsSection(title = "Безопасность") {
                 InfoCard(
-                    title = "Core версия",
-                    body = "Это core-версия приложения. Разрешение INTERNET отсутствует — " +
-                            "технически невозможно отправить данные на внешние серверы."
+                    title = "Core-версия без INTERNET",
+                    body  = "Разрешение INTERNET отсутствует — физически невозможно отправить " +
+                            "данные на внешние серверы. Автопроверка обновлений: вручную через GitHub."
                 )
             }
         }
 
         item {
-            SettingsSection(title = "Исходный код") {
+            SettingsSection(title = "Открытый код") {
                 InfoCard(
-                    title = "Open Source",
-                    body = "Код полностью открыт на GitHub. Можешь проверить что именно " +
-                            "делает приложение — нет ни одного скрытого SDK или трекера."
+                    title = "github.com/ANova0/stukachoff",
+                    body  = "Код полностью открыт. Нет аналитических SDK, " +
+                            "нет трекеров, нет фоновых процессов. " +
+                            "Можешь проверить и собрать самостоятельно."
                 )
             }
         }
@@ -71,12 +115,9 @@ fun SettingsScreen(onOpenOnboarding: () -> Unit) {
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.labelLarge,
+        Text(title, style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
+            modifier = Modifier.padding(bottom = 4.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column { content() }
         }
@@ -84,33 +125,18 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
+fun SettingsItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(imageVector = icon, contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -118,12 +144,10 @@ fun SettingsItem(
 @Composable
 fun InfoCard(title: String, body: String) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(title, style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
-        Text(
-            body,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(body, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
