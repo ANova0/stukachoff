@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Core flavor: только ACCESS_NETWORK_STATE — физически невозможно отправить данные наружу -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <queries>
+        <!-- VPN клиенты -->
+        <package android:name="app.hiddify.com" />
+        <package android:name="com.v2ray.ang" />
+        <package android:name="com.github.nekohasekai.sagernet" />
+        <package android:name="io.nekohasekai.sagernet" />
+        <package android:name="com.clash.mini" />
+        <package android:name="com.github.shadowsocks" />
+        <package android:name="org.amnezia.vpn" />
+        <package android:name="org.amnezia.awg" />
+        <package android:name="de.blinkt.openvpn" />
+        <package android:name="com.zaneschepke.wireguardautotunnel" />
+        <!-- Известные приложения-детекторы -->
+        <package android:name="com.vk.vkclient" />
+        <package android:name="ru.sberbankmobile" />
+        <package android:name="ru.tinkoff.banking.new" />
+        <package android:name="ru.ozon.app.android" />
+        <package android:name="com.avito.android" />
+        <package android:name="com.hh.android" />
+        <package android:name="ru.wildberries.app" />
+        <package android:name="ru.yandex.searchplugin" />
+        <package android:name="com.kinopoisk.app" />
+    </queries>
+
+</manifest>
