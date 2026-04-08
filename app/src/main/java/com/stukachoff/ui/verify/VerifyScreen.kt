@@ -24,6 +24,12 @@ fun VerifyScreen(
     onLearnMore: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val showScanning by viewModel.showScanning.collectAsState()
+
+    if (showScanning) {
+        ScanningScreen()
+        return
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

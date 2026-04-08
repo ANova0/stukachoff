@@ -30,51 +30,55 @@ data class OnboardingPage(
 
 val onboardingPages = listOf(
     OnboardingPage(
-        emoji = "🔍",
-        title = "Кто смотрит на твой VPN?",
-        body = "С апреля 2026 года десятки крупных российских приложений — " +
-                "маркетплейсы, банки, стриминг, сервисы — обязаны находить VPN на устройстве " +
-                "и передавать данные о нём в государственные реестры.\n\n" +
-                "Большинство пользователей не знают об этом.",
+        emoji  = "🕵️",
+        title  = "Стукачев следит за стукачами",
+        body   = "С апреля 2026 года десятки крупных российских приложений обязаны " +
+                "находить VPN на твоём устройстве и сообщать о нём в государственные реестры.\n\n" +
+                "Stukachoff показывает кто это делает — и что именно видит.",
         accent = Color(0xFFF44336)
     ),
     OnboardingPage(
-        emoji = "🛡️",
-        title = "Что делает Stukachoff",
-        body = "Сканирует твоё устройство так же, как это делают враждебные приложения — " +
-                "и показывает что они видят.\n\n" +
-                "Открытые порты, DNS-утечки, незащищённые API — " +
-                "всё это становится видно до того, как это найдут другие.",
+        emoji  = "🔍",
+        title  = "Как идёт расследование",
+        body   = "При запуске Stukachoff сканирует устройство так же, как это делают враждебные приложения:\n\n" +
+                "• Открытые порты на localhost\n" +
+                "• Незащищённые API VPN-клиентов\n" +
+                "• DNS-утечки и системный прокси\n" +
+                "• MTU-сигнатуры протоколов\n\n" +
+                "Все данные остаются на устройстве.",
+        accent = Color(0xFF9C27B0)
+    ),
+    OnboardingPage(
+        emoji  = "🔒",
+        title  = "Два режима работы",
+        body   = "Режим приватности (по умолчанию):\n" +
+                "Только локальные проверки. Ни один байт не уходит наружу.\n\n" +
+                "Сетевой режим (по желанию):\n" +
+                "Дополнительно — проверка exit IP через VPN-туннель и автообновление с GitHub по HTTPS.\n\n" +
+                "Переключается в Меню в любой момент.",
         accent = Color(0xFF4CAF50)
     ),
     OnboardingPage(
-        emoji = "🔒",
-        title = "Почему это безопасно",
-        body = "Большинство аналогичных приложений отправляют IP твоего VPN-сервера " +
-                "на внешние сайты в открытом виде — ТСПУ читает это мгновенно.\n\n" +
-                "Stukachoff (core-версия) физически не может отправить данные наружу — " +
-                "разрешения на интернет нет в манифесте.",
-        accent = Color(0xFF2196F3)
-    ),
-    OnboardingPage(
-        emoji = "🚫",
-        title = "Чего мы не делаем",
-        body = "✗  Не отправляем IP твоего сервера никуда\n" +
+        emoji  = "🚫",
+        title  = "Чего мы не делаем никогда",
+        body   = "✗  Не отправляем IP твоего сервера никуда\n" +
                 "✗  Не собираем идентификаторы устройства\n" +
                 "✗  Нет аналитики, трекеров, SDK слежки\n" +
                 "✗  Нет фоновой работы — только когда открыто\n" +
                 "✗  Не рекламируем VPN-сервисы\n\n" +
-                "Код открыт — можешь проверить сам.",
+                "Код полностью открыт — можешь проверить сам на GitHub.",
         accent = Color(0xFFFF9800)
     ),
     OnboardingPage(
-        emoji = "✅",
-        title = "Готово к работе",
-        body = "Запусти VPN и нажми «Проверить».\n\n" +
-                "Зелёный — защищено.\n" +
-                "Красный — есть проблема и инструкция как исправить.\n\n" +
-                "Онбординг можно открыть повторно через меню.",
-        accent = Color(0xFF4CAF50)
+        emoji  = "👁️",
+        title  = "Готов к расследованию",
+        body   = "Запусти VPN и нажми «Начать».\n\n" +
+                "Stukachoff проведёт расследование и покажет:\n\n" +
+                "🟢 Защищено — всё в порядке\n" +
+                "🟡 Частично — есть что улучшить\n" +
+                "🔴 Уязвимо — нужно исправить\n\n" +
+                "Настройки и режим работы — в третьей вкладке.",
+        accent = Color(0xFF2196F3)
     )
 )
 
@@ -88,16 +92,16 @@ fun OnboardingScreen(
         viewModel.completeOnboarding()
         onFinish()
     }
+
     val pagerState = rememberPagerState { onboardingPages.size }
-    val scope = rememberCoroutines()
+    val scope = rememberCoroutineScope()
     val isLastPage = pagerState.currentPage == onboardingPages.size - 1
+    val currentPage = onboardingPages[pagerState.currentPage]
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Skip кнопка
+        // Skip
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.End
         ) {
             if (!isLastPage) {
@@ -107,94 +111,78 @@ fun OnboardingScreen(
             }
         }
 
-        // Страницы
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f)
         ) { page ->
-            OnboardingPage(page = onboardingPages[page])
+            OnboardingPageContent(page = onboardingPages[page])
         }
 
-        // Индикатор страниц
+        // Dots
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(onboardingPages.size) { index ->
-                val color = if (index == pagerState.currentPage)
-                    onboardingPages[pagerState.currentPage].accent
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                val selected = index == pagerState.currentPage
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 4.dp)
-                        .size(if (index == pagerState.currentPage) 10.dp else 8.dp)
+                        .size(if (selected) 10.dp else 7.dp)
                         .clip(CircleShape)
-                        .background(color)
+                        .background(
+                            if (selected) currentPage.accent
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
                 )
             }
         }
 
-        // Кнопка
+        // Button
         Button(
             onClick = {
-                if (isLastPage) {
-                    finish()
-                } else {
-                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-                }
+                if (isLastPage) finish()
+                else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .height(52.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = onboardingPages[pagerState.currentPage].accent
-            ),
-            shape = RoundedCornerShape(12.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = currentPage.accent),
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text(
-                text = if (isLastPage) "Начать проверку" else "Далее",
+                if (isLastPage) "Начать расследование" else "Далее",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold
             )
         }
     }
 }
 
 @Composable
-fun OnboardingPage(page: OnboardingPage) {
+fun OnboardingPageContent(page: OnboardingPage) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Text(page.emoji, fontSize = 72.sp)
+        Spacer(Modifier.height(28.dp))
         Text(
-            text = page.emoji,
-            fontSize = 80.sp
-        )
-        Spacer(Modifier.height(32.dp))
-        Text(
-            text = page.title,
-            style = MaterialTheme.typography.headlineMedium,
+            page.title,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             color = page.accent
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
         Text(
-            text = page.body,
+            page.body,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Start,
-            color = MaterialTheme.colorScheme.onSurface,
             lineHeight = 24.sp
         )
     }
 }
-
-@Composable
-private fun rememberCoroutines() = rememberCoroutineScope()
