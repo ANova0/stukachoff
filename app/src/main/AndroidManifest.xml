@@ -6,22 +6,45 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
-        <!-- VPN клиенты -->
+        <!-- VPN клиенты — полный список из всех референсов -->
         <package android:name="app.hiddify.com" />
+        <package android:name="com.happproxy" />
         <package android:name="com.v2ray.ang" />
         <package android:name="dev.hexasoftware.v2box" />
         <package android:name="com.v2raytun.android" />
+        <package android:name="io.github.saeeddev94.xray" />
+        <package android:name="com.github.dyhkwong.sagernet" />
+        <package android:name="io.nekohasekai.sfa" />
         <package android:name="com.github.nekohasekai.sagernet" />
         <package android:name="io.nekohasekai.sagernet" />
+        <package android:name="moe.nb4a" />
         <package android:name="com.clash.mini" />
+        <package android:name="com.github.metacubex.clash.meta" />
         <package android:name="com.github.shadowsocks" />
+        <package android:name="com.github.shadowsocks.tv" />
+        <package android:name="io.github.dovecoteescapee.byedpi" />
+        <package android:name="com.romanvht.byebyedpi" />
         <package android:name="org.amnezia.vpn" />
         <package android:name="org.amnezia.awg" />
-        <package android:name="de.blinkt.openvpn" />
-        <package android:name="net.openvpn.openvpn" />
         <package android:name="com.wireguard.android" />
         <package android:name="com.zaneschepke.wireguardautotunnel" />
-        <package android:name="moe.nb4a" />
+        <package android:name="de.blinkt.openvpn" />
+        <package android:name="net.openvpn.openvpn" />
+        <package android:name="com.strongswan.android" />
+        <package android:name="org.torproject.android" />
+        <package android:name="org.torproject.torbrowser" />
+        <package android:name="info.guardianproject.orfox" />
+        <package android:name="org.outline.android.client" />
+        <package android:name="com.psiphon3" />
+        <package android:name="org.getlantern.lantern" />
+        <package android:name="com.cloudflare.onedotonedotonedotone" />
+        <package android:name="com.nordvpn.android" />
+        <package android:name="com.expressvpn.vpn" />
+        <package android:name="com.protonvpn.android" />
+        <package android:name="free.vpn.unblock.proxy.turbovpn" />
+        <package android:name="org.aspect.tgwsproxy" />
+        <package android:name="org.aspect.tgwsproxy.android" />
+        <package android:name="com.termux" />
 
         <!-- Известные приложения-детекторы -->
         <package android:name="com.vk.vkclient" />

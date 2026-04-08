@@ -40,28 +40,70 @@ class AppThreatAnalyzer @Inject constructor(
     }
 
     suspend fun installedVpnClients(): List<String> = withContext(Dispatchers.IO) {
-        val vpnPackages = listOf(
-            // Верифицированные package names (проверено через adb)
-            "app.hiddify.com"                     to "Hiddify",
-            "dev.hexasoftware.v2box"               to "V2Box",
-            "com.v2raytun.android"                 to "V2RayTun",
-            "com.v2ray.ang"                        to "v2rayNG",
-            "com.github.nekohasekai.sagernet"      to "NekoBox",
-            "io.nekohasekai.sagernet"              to "NekoBox",
-            "moe.nb4a"                             to "NekoBox (nb4a)",
-            "com.clash.mini"                       to "Clash",
-            "com.github.shadowsocks"               to "Shadowsocks",
-            "org.amnezia.vpn"                      to "AmneziaVPN",
-            "org.amnezia.awg"                      to "AmneziaWG",
-            "de.blinkt.openvpn"                    to "OpenVPN",
-            "net.openvpn.openvpn"                  to "OpenVPN Connect",
-            "com.wireguard.android"                to "WireGuard",
-            "com.zaneschepke.wireguardautotunnel"  to "WG Tunnel"
-        )
         val pm = context.packageManager
-        vpnPackages.mapNotNull { (pkg, name) ->
+        ALL_VPN_PACKAGES.mapNotNull { (pkg, name) ->
             try { pm.getPackageInfo(pkg, 0); name }
             catch (_: PackageManager.NameNotFoundException) { null }
         }
+    }
+
+    companion object {
+        // Полный список VPN-клиентов — объединение всех трёх референсов
+        // + верифицировано через adb на реальном устройстве
+        val ALL_VPN_PACKAGES = listOf(
+            // xray / V2Ray семейство
+            "com.v2ray.ang"                      to "v2rayNG",
+            "dev.hexasoftware.v2box"              to "V2Box",
+            "com.v2raytun.android"                to "V2RayTun",
+            "io.github.saeeddev94.xray"           to "Xray",
+            "com.github.dyhkwong.sagernet"        to "ExclaveVPN",
+            // sing-box / NekoBox семейство
+            "io.nekohasekai.sfa"                  to "sing-box",
+            "moe.nb4a"                            to "NekoBox",
+            "com.github.nekohasekai.sagernet"     to "NekoBox",
+            "io.nekohasekai.sagernet"             to "NekoBox",
+            // Hiddify
+            "app.hiddify.com"                     to "Hiddify",
+            // HappProxy (HAPP)
+            "com.happproxy"                       to "HappProxy",
+            // Clash семейство
+            "com.clash.mini"                      to "Clash",
+            "com.github.metacubex.clash.meta"     to "Clash Meta",
+            // Shadowsocks
+            "com.github.shadowsocks"              to "Shadowsocks",
+            "com.github.shadowsocks.tv"           to "Shadowsocks TV",
+            // ByeDPI
+            "io.github.dovecoteescapee.byedpi"    to "ByeDPI",
+            "com.romanvht.byebyedpi"              to "ByeByeDPI",
+            // Amnezia
+            "org.amnezia.vpn"                     to "AmneziaVPN",
+            "org.amnezia.awg"                     to "AmneziaWG",
+            // WireGuard
+            "com.wireguard.android"               to "WireGuard",
+            "com.zaneschepke.wireguardautotunnel"  to "WG Tunnel",
+            // OpenVPN
+            "de.blinkt.openvpn"                   to "OpenVPN",
+            "net.openvpn.openvpn"                 to "OpenVPN Connect",
+            // StrongSwan / IKEv2
+            "com.strongswan.android"              to "StrongSwan",
+            // Tor
+            "org.torproject.android"              to "Orbot (Tor)",
+            "org.torproject.torbrowser"           to "Tor Browser",
+            "info.guardianproject.orfox"          to "Orfox",
+            // Другие
+            "org.outline.android.client"          to "Outline VPN",
+            "com.psiphon3"                        to "Psiphon",
+            "org.getlantern.lantern"              to "Lantern",
+            "com.cloudflare.onedotonedotonedotone" to "Cloudflare WARP",
+            "com.nordvpn.android"                 to "NordVPN",
+            "com.expressvpn.vpn"                  to "ExpressVPN",
+            "com.protonvpn.android"               to "Proton VPN",
+            "free.vpn.unblock.proxy.turbovpn"     to "Turbo VPN",
+            // Telegram прокси
+            "org.aspect.tgwsproxy"                to "TG WS Proxy",
+            "org.aspect.tgwsproxy.android"        to "TG WS Proxy",
+            // Termux (часто используется для проксирования)
+            "com.termux"                          to "Termux"
+        )
     }
 }

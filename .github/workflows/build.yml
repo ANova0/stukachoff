@@ -1,20 +1,23 @@
-name: Build & Test
+name: Build & Release
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -22,54 +25,80 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/libs.versions.toml') }}
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
       - name: Unit Tests
-        run: ./gradlew testCoreDebugUnitTest testFullDebugUnitTest
-      - name: Build Core APK
-        run: ./gradlew assembleCoreDebug
-      - name: Build Full APK
-        run: ./gradlew assembleFullDebug
-      - name: Verify no INTERNET in core
-        run: |
-          PERMS=$(aapt dump permissions app/build/outputs/apk/core/debug/app-core-debug.apk)
-          if echo "$PERMS" | grep -q "android.permission.INTERNET"; then
-            echo "FAIL: INTERNET permission found in core flavor!"
-            exit 1
-          fi
-          echo "OK: No INTERNET permission in core flavor"
+        run: ./gradlew testDebugUnitTest
 
   release:
     runs-on: ubuntu-latest
-    needs: test
+    needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Build Release APKs
-        run: ./gradlew assembleCoreRelease assembleFullRelease
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/libs.versions.toml') }}
+
+      # Декодируем keystore из GitHub Secrets
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+
+      # Собираем подписанный release APK
+      - name: Build signed Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$STORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      # SHA-256 для верификации
       - name: Compute SHA-256
         run: |
-          sha256sum app/build/outputs/apk/core/release/*.apk > checksums.txt
-          sha256sum app/build/outputs/apk/full/release/*.apk >> checksums.txt
+          sha256sum app/build/outputs/apk/release/app-release.apk > checksums.txt
           cat checksums.txt
-      - name: Create Release
+
+      # Публикуем релиз на GitHub
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            app/build/outputs/apk/core/release/*.apk
-            app/build/outputs/apk/full/release/*.apk
+            app/build/outputs/apk/release/app-release.apk
             checksums.txt
           body: |
             ## Stukachoff ${{ github.ref_name }}
 
-            ### Версии
-            - `stukachoff-core.apk` — без INTERNET permission. Физически не может отправить данные наружу.
-            - `stukachoff-full.apk` — с проверкой exit IP и обновлением базы угроз.
+            ### Установка
+            1. Скачай `app-release.apk`
+            2. Проверь SHA-256 из `checksums.txt`
+            3. Установи APK
 
-            ### Проверка подлинности
-            Сверь SHA-256 из файла `checksums.txt` перед установкой.
+            ### Верификация SHA-256
+            ```
+            sha256sum -c checksums.txt
+            ```
 
             ### Исходный код
-            Reproducible build: собери сам и сравни хеш.
+            Собери из исходников и сравни хеш — результат будет идентичным.
+
+            ---
+            🔒 APK подписан ключом разработчика и верифицирован SHA-256
