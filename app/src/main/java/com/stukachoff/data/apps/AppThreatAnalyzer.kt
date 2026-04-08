@@ -22,7 +22,6 @@ class AppThreatAnalyzer @Inject constructor(
                 pm.getPackageInfo(entry.packageName, 0)
             } catch (_: PackageManager.NameNotFoundException) { null }
 
-            // Показываем только установленные приложения
             packageInfo ?: return@mapNotNull null
 
             AppThreat(
@@ -42,16 +41,22 @@ class AppThreatAnalyzer @Inject constructor(
 
     suspend fun installedVpnClients(): List<String> = withContext(Dispatchers.IO) {
         val vpnPackages = listOf(
-            "app.hiddify.com"                    to "Hiddify",
-            "com.v2ray.ang"                      to "v2rayNG",
-            "com.github.nekohasekai.sagernet"    to "NekoBox",
-            "io.nekohasekai.sagernet"            to "NekoBox",
-            "com.clash.mini"                     to "Clash",
-            "com.github.shadowsocks"             to "Shadowsocks",
-            "org.amnezia.vpn"                    to "AmneziaVPN",
-            "org.amnezia.awg"                    to "AmneziaWG",
-            "de.blinkt.openvpn"                  to "OpenVPN",
-            "com.zaneschepke.wireguardautotunnel" to "WG Tunnel"
+            // Верифицированные package names (проверено через adb)
+            "app.hiddify.com"                     to "Hiddify",
+            "dev.hexasoftware.v2box"               to "V2Box",
+            "com.v2raytun.android"                 to "V2RayTun",
+            "com.v2ray.ang"                        to "v2rayNG",
+            "com.github.nekohasekai.sagernet"      to "NekoBox",
+            "io.nekohasekai.sagernet"              to "NekoBox",
+            "moe.nb4a"                             to "NekoBox (nb4a)",
+            "com.clash.mini"                       to "Clash",
+            "com.github.shadowsocks"               to "Shadowsocks",
+            "org.amnezia.vpn"                      to "AmneziaVPN",
+            "org.amnezia.awg"                      to "AmneziaWG",
+            "de.blinkt.openvpn"                    to "OpenVPN",
+            "net.openvpn.openvpn"                  to "OpenVPN Connect",
+            "com.wireguard.android"                to "WireGuard",
+            "com.zaneschepke.wireguardautotunnel"  to "WG Tunnel"
         )
         val pm = context.packageManager
         vpnPackages.mapNotNull { (pkg, name) ->

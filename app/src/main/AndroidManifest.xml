@@ -9,6 +9,8 @@
         <!-- VPN клиенты -->
         <package android:name="app.hiddify.com" />
         <package android:name="com.v2ray.ang" />
+        <package android:name="dev.hexasoftware.v2box" />
+        <package android:name="com.v2raytun.android" />
         <package android:name="com.github.nekohasekai.sagernet" />
         <package android:name="io.nekohasekai.sagernet" />
         <package android:name="com.clash.mini" />
@@ -16,17 +18,31 @@
         <package android:name="org.amnezia.vpn" />
         <package android:name="org.amnezia.awg" />
         <package android:name="de.blinkt.openvpn" />
+        <package android:name="net.openvpn.openvpn" />
+        <package android:name="com.wireguard.android" />
         <package android:name="com.zaneschepke.wireguardautotunnel" />
+        <package android:name="moe.nb4a" />
+
         <!-- Известные приложения-детекторы -->
         <package android:name="com.vk.vkclient" />
+        <package android:name="ru.vk.store" />
         <package android:name="ru.sberbankmobile" />
-        <package android:name="ru.tinkoff.banking.new" />
+        <package android:name="com.idamob.tinkoff.android" />
+        <package android:name="ru.tinkoff.mvno" />
+        <package android:name="com.wildberries.ru" />
         <package android:name="ru.ozon.app.android" />
         <package android:name="com.avito.android" />
         <package android:name="com.hh.android" />
-        <package android:name="ru.wildberries.app" />
+        <package android:name="ru.vtb24.mobilebanking.android" />
         <package android:name="ru.yandex.searchplugin" />
+        <package android:name="com.yandex.browser" />
+        <package android:name="com.yandex.bank" />
+        <package android:name="ru.kinopoisk" />
         <package android:name="com.kinopoisk.app" />
+        <package android:name="ru.gosuslugi" />
+        <package android:name="ru.gosuslugi.mob" />
+        <package android:name="ru.rostel" />
+        <package android:name="com.mts.mtsbankonline" />
     </queries>
 
     <application

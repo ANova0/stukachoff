@@ -1,14 +1,22 @@
 {
-  "version": "2026-04-08",
+  "version": "2026-04-09",
   "known_apps": [
     {
       "package": "com.vk.vkclient",
-      "name": "VK Max",
+      "name": "VK Max / ВКонтакте",
       "threat_level": "red",
       "confirmed": true,
       "methods": ["transport_vpn", "http_probing", "plmn"],
-      "harm": "HTTP-пробы к заблокированным сайтам + код оператора SIM передаются через бинарный TCP-протокол",
+      "harm": "HTTP-пробы к заблокированным сайтам + код оператора SIM передаются через бинарный TCP-протокол в РКН",
       "source": "ntc.party тред 22584, март 2026"
+    },
+    {
+      "package": "ru.vk.store",
+      "name": "VK Store",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Часть экосистемы VK, подпадает под те же требования РКН"
     },
     {
       "package": "ru.sberbankmobile",
@@ -19,12 +27,28 @@
       "harm": "Обязан внедрить детекцию к 15.04.2026 по требованию Минцифры"
     },
     {
-      "package": "ru.tinkoff.banking.new",
-      "name": "Т-Банк",
+      "package": "com.idamob.tinkoff.android",
+      "name": "Т-Банк (Тинькофф)",
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Официально рекомендует отключить VPN при входе в приложение"
+      "harm": "Официально рекомендует отключить VPN при входе. Участник совещания Минцифры."
+    },
+    {
+      "package": "ru.tinkoff.mvno",
+      "name": "Т-Мобайл (оператор от Т-Банк)",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn", "plmn"],
+      "harm": "Мобильный оператор — имеет доступ к MCC/SIM и может коррелировать с IP"
+    },
+    {
+      "package": "com.wildberries.ru",
+      "name": "Wildberries",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Нестабильная работа с VPN с 7 апреля 2026. Участник совещания Минцифры."
     },
     {
       "package": "ru.ozon.app.android",
@@ -33,6 +57,14 @@
       "confirmed": false,
       "methods": ["transport_vpn", "localhost_scan"],
       "harm": "Участник совещания Минцифры 28.03.2026, дедлайн 15.04.2026"
+    },
+    {
+      "package": "ru.vtb24.mobilebanking.android",
+      "name": "ВТБ Банк",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Пострадал от блокировок ТСПУ 3-4 апреля. Обязан внедрить детекцию к 15.04.2026"
     },
     {
       "package": "com.avito.android",
@@ -51,20 +83,44 @@
       "harm": "Обязан внедрить детекцию к 15.04.2026"
     },
     {
-      "package": "ru.wildberries.app",
-      "name": "Wildberries",
-      "threat_level": "yellow",
-      "confirmed": false,
-      "methods": ["transport_vpn"],
-      "harm": "Нестабильная работа с VPN зафиксирована с 7 апреля 2026"
-    },
-    {
       "package": "ru.yandex.searchplugin",
       "name": "Яндекс",
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn", "http_probing"],
-      "harm": "Участник совещания Минцифры. Кинопоиск входит в экосистему."
+      "harm": "Участник совещания Минцифры. Кинопоиск входит в экосистему Яндекса."
+    },
+    {
+      "package": "com.yandex.browser",
+      "name": "Яндекс Браузер",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn", "http_probing"],
+      "harm": "Часть экосистемы Яндекса, подпадает под требования РКН"
+    },
+    {
+      "package": "com.yandex.bank",
+      "name": "Яндекс Банк",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Банковское приложение Яндекса, подпадает под требования РКН"
+    },
+    {
+      "package": "ru.gosuslugi",
+      "name": "Госуслуги",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Государственный сервис — прямой доступ к данным пользователей, высокий риск"
+    },
+    {
+      "package": "ru.gosuslugi.mob",
+      "name": "Госуслуги (мобильный)",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn"],
+      "harm": "Государственный сервис — прямой доступ к данным пользователей, высокий риск"
     }
   ],
   "permission_risks": {
