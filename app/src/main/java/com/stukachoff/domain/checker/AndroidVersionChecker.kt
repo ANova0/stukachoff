@@ -4,8 +4,9 @@ import android.os.Build
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.HarmSeverity
+import javax.inject.Inject
 
-class AndroidVersionChecker {
+class AndroidVersionChecker @Inject constructor() {
 
     fun classify(sdkVersion: Int): CheckStatus =
         if (sdkVersion >= Build.VERSION_CODES.Q) CheckStatus.GREEN else CheckStatus.RED

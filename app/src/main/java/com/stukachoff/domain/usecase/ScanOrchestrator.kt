@@ -23,7 +23,7 @@ class ScanOrchestrator @Inject constructor(
     private val portScanner: PortScanner,
     private val interfaceChecker: InterfaceChecker,
     private val dnsChecker: DnsChecker,
-    private val androidVersionChecker: AndroidVersionChecker = AndroidVersionChecker()
+    private val androidVersionChecker: AndroidVersionChecker
 ) {
     fun scan(): Flow<ScanState> = flow {
         emit(ScanState(isScanning = true))
