@@ -4,6 +4,7 @@ data class ScanState(
     val vpnStatus: VpnStatus = VpnStatus.UNKNOWN,
     val alwaysVisible: List<CheckResult.AlwaysVisible> = emptyList(),
     val fixable: List<CheckResult.Fixable> = emptyList(),
+    val deviceInfo: DeviceInfo? = null,
     val isScanning: Boolean = false,
     val error: String? = null
 )

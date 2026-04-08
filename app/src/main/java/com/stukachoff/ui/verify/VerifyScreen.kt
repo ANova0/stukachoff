@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.stukachoff.domain.model.*
+import android.os.Build
 
 @Composable
 fun VerifyScreen(
@@ -36,7 +37,7 @@ fun VerifyScreen(
         }
 
         if (state.alwaysVisible.isNotEmpty()) {
-            item { AlwaysVisibleSection(state.alwaysVisible) }
+            item { AlwaysVisibleSection(state.alwaysVisible, state.deviceInfo) }
         }
 
         if (state.fixable.isNotEmpty()) {
@@ -115,13 +116,14 @@ fun NotActiveMessage() {
 }
 
 @Composable
-fun AlwaysVisibleSection(checks: List<CheckResult.AlwaysVisible>) {
+fun AlwaysVisibleSection(
+    checks: List<CheckResult.AlwaysVisible>,
+    deviceInfo: DeviceInfo? = null
+) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -139,7 +141,15 @@ fun AlwaysVisibleSection(checks: List<CheckResult.AlwaysVisible>) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(8.dp))
+
+            // Краткая сводка всегда видна
+            deviceInfo?.let { info ->
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(10.dp))
+                DeviceInfoSummary(info)
+            }
+
             TextButton(onClick = { expanded = !expanded }) {
                 Text(if (expanded) "Скрыть детали ↑" else "Что именно видят? ↓")
             }
@@ -154,11 +164,48 @@ fun AlwaysVisibleSection(checks: List<CheckResult.AlwaysVisible>) {
                         Text("✅ Знают: ${check.knowsWhat}",
                             style = MaterialTheme.typography.bodySmall)
                         Text("❌ Не знают: ${check.doesntKnow}",
-                            style = MaterialTheme.typography.bodySmall)
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(4.dp))
+                        Text(check.explanation,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DeviceInfoSummary(info: DeviceInfo) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        InfoRow("Устройство", "${info.manufacturer} ${info.model}")
+        InfoRow("Android", "${info.androidVersion} (API ${info.sdkInt})")
+        info.vpnInterfaces.forEach { iface ->
+            InfoRow(iface.name, iface.addresses.joinToString(", ").ifBlank { "—" })
+        }
+        if (info.installedVpnClients.isNotEmpty()) {
+            InfoRow("VPN-клиент", info.installedVpnClients.joinToString(", "))
+        }
+    }
+}
+
+@Composable
+fun InfoRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "$label:",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(100.dp)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
