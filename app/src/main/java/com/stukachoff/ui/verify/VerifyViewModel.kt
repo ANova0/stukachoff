@@ -7,10 +7,10 @@ import android.content.Intent
 import com.stukachoff.data.export.ReportExporter
 import com.stukachoff.data.network.DnsCheckerImpl
 import com.stukachoff.data.network.ExitIpChecker
+import com.stukachoff.data.network.InterfaceCheckerImpl
 import com.stukachoff.data.network.PortScannerImpl
 import com.stukachoff.data.network.SystemProxyAnalyzer
 import com.stukachoff.domain.checker.AndroidVersionChecker
-import com.stukachoff.domain.checker.InterfaceCheckerImpl
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.ScanState
 import com.stukachoff.domain.usecase.ScanOrchestrator
