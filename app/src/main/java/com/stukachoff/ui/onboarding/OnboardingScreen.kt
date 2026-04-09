@@ -99,15 +99,13 @@ fun OnboardingScreen(
     val currentPage = onboardingPages[pagerState.currentPage]
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Skip
+        // Пропустить — на всех слайдах включая последний
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.End
         ) {
-            if (!isLastPage) {
-                TextButton(onClick = finish) {
-                    Text("Пропустить", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            TextButton(onClick = finish) {
+                Text("Пропустить", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

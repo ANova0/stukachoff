@@ -47,7 +47,7 @@ fun VerifyScreen(
         item { VpnStatusBanner(state.vpnStatus, state.isScanning) }
 
         if (state.vpnStatus == VpnStatus.NOT_ACTIVE) {
-            item { NotActiveMessage() }
+            item { NotActiveMessage(onScan = { viewModel.scan() }) }
             return@LazyColumn
         }
 
@@ -138,21 +138,37 @@ fun VpnStatusBanner(status: VpnStatus, isScanning: Boolean) {
 }
 
 @Composable
-fun NotActiveMessage() {
-    Card(
+fun NotActiveMessage(onScan: () -> Unit = {}) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Запусти VPN и нажми «Проверить снова»",
-                style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Stukachoff показывает реальную картину только при активном VPN-соединении.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Spacer(Modifier.height(32.dp))
+        Text("🔍", fontSize = 64.sp)
+        Spacer(Modifier.height(24.dp))
+        Text(
+            "Включи VPN и начни расследование",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Stukachoff покажет кто следит за твоим VPN только при активном соединении",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(32.dp))
+        Button(
+            onClick  = onScan,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
+            shape    = RoundedCornerShape(14.dp)
+        ) {
+            Text("Сканировать устройство", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
@@ -184,7 +200,7 @@ fun AlwaysVisibleSection(
     checks: List<CheckResult.AlwaysVisible>,
     deviceInfo: DeviceInfo? = null
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var glossaryCheck by remember { mutableStateOf<CheckResult.AlwaysVisible?>(null) }
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -195,48 +211,94 @@ fun AlwaysVisibleSection(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 "Это видят все приложения",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Скрыть без root невозможно — это архитектура Android",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Spacer(Modifier.height(10.dp))
+
+            // Три строки — минималистично
+            AlwaysVisibleRow(
+                label       = "Конечный IP-адрес",
+                status      = if (deviceInfo != null) "Не защищён от компрометации" else "—",
+                isProtected = false,
+                explanation = checks.find { it.id == "transport_vpn" }?.explanation ?: "",
+                onHelp      = { glossaryCheck = checks.find { it.id == "transport_vpn" } }
             )
+            AlwaysVisibleRow(
+                label       = "Установленные VPN-клиенты",
+                status      = if ((deviceInfo?.installedVpnClients?.size ?: 0) > 0)
+                                  "Обнаружены (${deviceInfo!!.installedVpnClients.joinToString(", ")})"
+                              else "Не обнаружены",
+                isProtected = (deviceInfo?.installedVpnClients?.size ?: 0) == 0,
+                explanation = checks.find { it.id == "vpn_clients" }?.explanation ?: "",
+                onHelp      = { glossaryCheck = checks.find { it.id == "vpn_clients" } }
+            )
+            AlwaysVisibleRow(
+                label       = "Заблокированные сайты",
+                status      = "Доступны",
+                isProtected = false,
+                explanation = checks.find { it.id == "http_probing" }?.explanation ?: "",
+                onHelp      = { glossaryCheck = checks.find { it.id == "http_probing" } }
+            )
+        }
+    }
 
-            // Краткая сводка всегда видна
-            deviceInfo?.let { info ->
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(10.dp))
-                DeviceInfoSummary(info)
-            }
-
-            TextButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "Скрыть детали ↑" else "Что именно видят? ↓")
-            }
-            AnimatedVisibility(visible = expanded) {
+    // Bottom sheet с пояснением при нажатии (?)
+    glossaryCheck?.let { check ->
+        AlertDialog(
+            onDismissRequest = { glossaryCheck = null },
+            title   = { Text(check.title) },
+            text    = {
                 Column {
-                    checks.forEach { check ->
-                        Spacer(Modifier.height(8.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(8.dp))
-                        Text(check.title, fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.bodyMedium)
-                        Text("✅ Знают: ${check.knowsWhat}",
-                            style = MaterialTheme.typography.bodySmall)
-                        Text("❌ Не знают: ${check.doesntKnow}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(4.dp))
-                        Text(check.explanation,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Text(check.explanation, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text("✅ Знают: ${check.knowsWhat}",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("❌ Не знают: ${check.doesntKnow}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = { glossaryCheck = null }) { Text("Понятно") }
             }
+        )
+    }
+}
+
+@Composable
+fun AlwaysVisibleRow(
+    label: String,
+    status: String,
+    isProtected: Boolean,
+    explanation: String,
+    onHelp: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium)
+            Text(
+                status,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isProtected) Color(0xFF4CAF50)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        // Кнопка (?)
+        TextButton(
+            onClick = onHelp,
+            contentPadding = PaddingValues(4.dp),
+            modifier = Modifier.size(32.dp)
+        ) {
+            Text("?", fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary)
         }
     }
 }

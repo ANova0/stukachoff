@@ -66,7 +66,7 @@ class ScanOrchestrator @Inject constructor(
 
             val fixable = buildList {
                 add(androidVersionChecker.check())
-                add(ports.proxyModeResult)
+                // proxy_mode убран по решению маркетолога — слишком технично для пользователя
                 add(ports.grpcApiResult)
                 add(ports.clashApiResult)
                 add(dns)

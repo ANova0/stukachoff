@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -29,7 +28,7 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     updateViewModel: UpdateViewModel = hiltViewModel()
 ) {
-    val privacyMode by settingsViewModel.privacyMode.collectAsState()
+    val autoUpdate by settingsViewModel.autoUpdate.collectAsState()
     val updateState by updateViewModel.state.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
 
@@ -62,27 +61,24 @@ fun SettingsScreen(
             }
         }
 
-        // Режим приватности — главный переключатель
-        item {
-            SettingsSection(title = "Режим работы") {
-                PrivacyModeToggle(
-                    enabled   = privacyMode,
-                    onToggle  = { settingsViewModel.setPrivacyMode(it) }
-                )
-            }
-        }
-
+        // Обновления — главный блок
         item {
             SettingsSection(title = "Обновления") {
+                // Кнопка проверки
                 SettingsItem(
                     icon     = Icons.Default.Refresh,
-                    title    = "Проверить обновления",
-                    subtitle = if (privacyMode) "Включи сетевой режим для автопроверки"
-                               else "Текущая версия ${BuildConfig.VERSION_NAME}",
+                    title    = "Проверить обновление",
+                    subtitle = "Текущая версия ${BuildConfig.VERSION_NAME}",
                     onClick  = {
                         showUpdateDialog = true
                         updateViewModel.checkForUpdates()
                     }
+                )
+                HorizontalDivider()
+                // Переключатель автообновления
+                AutoUpdateToggle(
+                    enabled  = autoUpdate,
+                    onToggle = { settingsViewModel.setAutoUpdate(it) }
                 )
             }
         }
@@ -95,6 +91,7 @@ fun SettingsScreen(
                     subtitle = "Повторный просмотр онбординга",
                     onClick = onOpenOnboarding
                 )
+                HorizontalDivider()
                 SettingsItem(
                     icon     = Icons.Default.Info,
                     title    = "О приложении",
@@ -117,34 +114,16 @@ fun SettingsScreen(
 }
 
 @Composable
-fun PrivacyModeToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+fun AutoUpdateToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = if (enabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        if (enabled) "Режим приватности" else "Сетевой режим",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        if (enabled) "Никаких сетевых запросов" else "Exit IP + автообновление",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            Text("Включить автообновление",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f))
             Switch(
                 checked = enabled,
                 onCheckedChange = onToggle,
@@ -154,24 +133,13 @@ fun PrivacyModeToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 )
             )
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        Surface(
-            color = if (enabled) Color(0xFF4CAF50).copy(alpha = 0.1f)
-                    else Color(0xFF2196F3).copy(alpha = 0.1f),
-            shape = MaterialTheme.shapes.small
-        ) {
-            Text(
-                if (enabled)
-                    "🔒 Приложение не делает сетевых запросов. Все проверки — только локально на устройстве."
-                else
-                    "🌐 Разрешены HTTPS-запросы: проверка exit IP через VPN-туннель и автообновление с GitHub.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(8.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (enabled) "В данном режиме агент Стукачёв будет делать сетевые запросы"
+            else "Только локальные проверки — никаких сетевых запросов",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

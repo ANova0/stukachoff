@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.stukachoff.data.apps.AppPermissionRisk
 import com.stukachoff.data.apps.AppThreatAnalyzer
 import com.stukachoff.data.apps.PermissionAnalyzer
+import com.stukachoff.data.apps.ProcessChecker
 import com.stukachoff.data.content.ContentRepository
 import com.stukachoff.domain.model.AppThreat
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import javax.inject.Inject
 data class ThreatsState(
     val threats: List<AppThreat> = emptyList(),
     val permissionRisks: List<AppPermissionRisk> = emptyList(),
+    val runningPackages: Set<String> = emptySet(),
     val isLoading: Boolean = true,
     val noneInstalled: Boolean = false
 )
@@ -24,6 +26,7 @@ data class ThreatsState(
 class ThreatsViewModel @Inject constructor(
     private val analyzer: AppThreatAnalyzer,
     private val permissionAnalyzer: PermissionAnalyzer,
+    private val processChecker: ProcessChecker,
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
@@ -38,11 +41,13 @@ class ThreatsViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.value = ThreatsState(isLoading = true)
-            val threats = analyzer.analyze()
-            val risks   = permissionAnalyzer.analyzeInstalledApps()
+            val threats  = analyzer.analyze()
+            val risks    = permissionAnalyzer.analyzeInstalledApps()
+            val running  = processChecker.getRunningPackages()
             _state.value = ThreatsState(
                 threats          = threats,
                 permissionRisks  = risks,
+                runningPackages  = running,
                 isLoading        = false,
                 noneInstalled    = threats.isEmpty()
             )

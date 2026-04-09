@@ -12,11 +12,12 @@ class SettingsViewModel @Inject constructor(
     private val prefs: AppPreferences
 ) : ViewModel() {
 
-    private val _privacyMode = MutableStateFlow(prefs.privacyModeEnabled)
-    val privacyMode = _privacyMode.asStateFlow()
+    // autoUpdate = true → privacyMode = false (разрешаем сеть)
+    private val _autoUpdate = MutableStateFlow(!prefs.privacyModeEnabled)
+    val autoUpdate = _autoUpdate.asStateFlow()
 
-    fun setPrivacyMode(enabled: Boolean) {
-        prefs.privacyModeEnabled = enabled
-        _privacyMode.value = enabled
+    fun setAutoUpdate(enabled: Boolean) {
+        prefs.privacyModeEnabled = !enabled
+        _autoUpdate.value = enabled
     }
 }
