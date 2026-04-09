@@ -7,10 +7,11 @@ import android.content.Intent
 import com.stukachoff.data.export.ReportExporter
 import com.stukachoff.data.network.DnsCheckerImpl
 import com.stukachoff.data.network.ExitIpChecker
-import com.stukachoff.data.network.InterfaceCheckerImpl
-import com.stukachoff.data.network.PortScannerImpl
 import com.stukachoff.data.network.SystemProxyAnalyzer
 import com.stukachoff.domain.checker.AndroidVersionChecker
+import com.stukachoff.domain.checker.InterfaceChecker
+import com.stukachoff.domain.checker.OpenPort
+import com.stukachoff.domain.checker.PortScanner
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.ScanState
 import com.stukachoff.domain.usecase.ScanOrchestrator
@@ -29,6 +30,8 @@ private const val MIN_SCAN_DURATION_MS = 7_000L
 class VerifyViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val orchestrator: ScanOrchestrator,
+    private val portScanner: PortScanner,
+    private val interfaceChecker: InterfaceChecker,
     private val exitIpChecker: ExitIpChecker,
     private val androidVersionChecker: AndroidVersionChecker,
     private val dnsChecker: DnsCheckerImpl,
@@ -44,6 +47,12 @@ class VerifyViewModel @Inject constructor(
     // ID проверки которая сейчас перепроверяется (для spinner на карточке)
     private val _recheckingId = MutableStateFlow<String?>(null)
     val recheckingId = _recheckingId.asStateFlow()
+
+    private val _fullScanPorts = MutableStateFlow<List<OpenPort>>(emptyList())
+    val fullScanPorts = _fullScanPorts.asStateFlow()
+
+    private val _isDeepScanning = MutableStateFlow(false)
+    val isDeepScanning = _isDeepScanning.asStateFlow()
 
     init { scan() }
 
@@ -73,6 +82,16 @@ class VerifyViewModel @Inject constructor(
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
+    fun deepScan() {
+        if (_isDeepScanning.value) return
+        viewModelScope.launch {
+            _isDeepScanning.value = true
+            val results = portScanner.fullScan()
+            _fullScanPorts.value = results
+            _isDeepScanning.value = false
+        }
+    }
+
     /**
      * Перепроверяет одну конкретную карточку без полного пересканирования.
      */
@@ -86,14 +105,14 @@ class VerifyViewModel @Inject constructor(
                 "system_proxy"   -> SystemProxyAnalyzer.check()
                 "proxy_mode",
                 "grpc_api",
-                "clash_api"      -> PortScannerImpl().scan().let { ports ->
+                "clash_api"      -> portScanner.scan().let { ports ->
                     when (checkId) {
                         "proxy_mode" -> ports.proxyModeResult
                         "grpc_api"   -> ports.grpcApiResult
                         else         -> ports.clashApiResult
                     }
                 }
-                "mtu"            -> InterfaceCheckerImpl().check().mtuResult
+                "mtu"            -> interfaceChecker.check().mtuResult
                 else             -> null
             }
 

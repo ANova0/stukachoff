@@ -56,7 +56,7 @@ object ActiveClientDetector {
         mtu: Int,
         runningPackages: Set<String>,
         openPorts: List<OpenPort>
-    ): ActiveClient? {
+    ): ActiveClient {
         // Signal 1: interface name → engine
         val engineByIface: VpnEngine? = when {
             interfaceName.startsWith("awg", ignoreCase = true) -> VpnEngine.AMNEZIA
@@ -134,7 +134,7 @@ class ActiveClientCheckerImpl @Inject constructor(
         primaryInterface: String?,
         mtu: Int,
         openPorts: List<OpenPort>
-    ): ActiveClient? = withContext(Dispatchers.IO) {
+    ): ActiveClient = withContext(Dispatchers.IO) {
         val running = processChecker.getRunningPackages()
         ActiveClientDetector.classify(primaryInterface ?: "tun0", mtu, running, openPorts)
     }

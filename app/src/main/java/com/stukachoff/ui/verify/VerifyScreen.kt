@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.stukachoff.domain.model.*
 import com.stukachoff.ui.common.GlossaryText
 import android.os.Build
@@ -35,6 +34,8 @@ fun VerifyScreen(
     val state by viewModel.state.collectAsState()
     val showScanning by viewModel.showScanning.collectAsState()
     val recheckingId by viewModel.recheckingId.collectAsState()
+    val isDeepScanning by viewModel.isDeepScanning.collectAsState()
+    val fullScanPorts by viewModel.fullScanPorts.collectAsState()
 
     if (showScanning) {
         ScanningScreen()
@@ -121,6 +122,37 @@ fun VerifyScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = "Поделиться",
                             modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+
+        // Deep Scan button
+        if (!isDeepScanning && fullScanPorts.isEmpty()) {
+            item {
+                OutlinedButton(
+                    onClick = { viewModel.deepScan() },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
+                    Text("🔍 Глубокое сканирование (1024-65535)")
+                }
+            }
+        }
+        if (isDeepScanning) {
+            item {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                Text("Сканирую все порты...", modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        if (fullScanPorts.isNotEmpty()) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Найдено в глубоком скане: ${fullScanPorts.size} открытых портов")
+                        fullScanPorts.take(10).forEach { p ->
+                            Text("• Порт ${p.port}: ${p.description}", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }

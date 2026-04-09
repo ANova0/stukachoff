@@ -45,6 +45,14 @@ class PortScannerImpl : PortScanner {
             it.category in setOf(PortCategory.SOCKS5, PortCategory.HTTP_PROXY, PortCategory.MIXED)
         }
 
+        // After identifying proxy ports, verify what protocol they actually are
+        val proxyPortDetails = openPorts
+            .filter { it.category in setOf(PortCategory.SOCKS5, PortCategory.HTTP_PROXY, PortCategory.MIXED) }
+            .joinToString(", ") { op ->
+                val proto = ProtocolVerifier.verify(op.port)
+                "${op.port}=${proto.name}"
+            }
+
         PortScanResult(
             openKnownPorts = openPorts,
             grpcApiResult = CheckResult.Fixable(
@@ -65,13 +73,13 @@ class PortScannerImpl : PortScanner {
             ),
             proxyModeResult = CheckResult.Fixable(
                 id = "proxy_mode",
-                title = "Режим VPN-клиента",
-                status = when {
-                    proxyOpen -> CheckStatus.RED
-                    else -> CheckStatus.GREEN
-                },
-                harm = "Прокси-порт виден любому приложению без разрешений. Протокол идентифицирован.",
-                harmSeverity = HarmSeverity.HIGH
+                title = "Прокси-порт",
+                status = if (proxyOpen) CheckStatus.RED else CheckStatus.GREEN,
+                harm = if (proxyOpen)
+                    "Открыт прокси-порт: $proxyPortDetails — виден без разрешений"
+                else
+                    "Нет открытых прокси-портов",
+                harmSeverity = if (proxyOpen) HarmSeverity.HIGH else HarmSeverity.INFO
             )
         )
     }

@@ -22,7 +22,9 @@ import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.ConfigSource
 import com.stukachoff.domain.model.DeviceInfo
+import com.stukachoff.domain.model.OutboundConfig
 import com.stukachoff.domain.model.ScanState
+import com.stukachoff.domain.model.TsupLevel
 import com.stukachoff.domain.model.VpnConfig
 import com.stukachoff.domain.model.VpnStatus
 import kotlinx.coroutines.async
@@ -100,6 +102,31 @@ class ScanOrchestrator @Inject constructor(
                 if (outbounds.isNotEmpty()) VpnConfig(ConfigSource.XRAY_GRPC, outbounds) else null
             } else null
 
+            // Read Clash config if API port is open
+            val clashConfig = if (ports.clashApiResult.status == CheckStatus.RED && vpnConfig == null) {
+                val clashPort = ports.openKnownPorts
+                    .firstOrNull { it.category == PortCategory.CLASH_API }?.port ?: 9090
+                clashConfigReader.read(clashPort)?.let { result ->
+                    val outbounds = result.proxies.take(3).map { proxy ->
+                        OutboundConfig(
+                            protocol      = proxy.type.lowercase(),
+                            serverAddress = proxy.server,
+                            serverPort    = proxy.port,
+                            transport     = "tcp",
+                            security      = "tls",
+                            sni           = "",
+                            uuid          = "",
+                            publicKey     = null,
+                            tsupResistance = TsupLevel.MEDIUM
+                        )
+                    }
+                    if (outbounds.isNotEmpty()) VpnConfig(ConfigSource.CLASH_API, outbounds) else null
+                }
+            } else null
+
+            // Use whichever config we found (prefer xray, fallback clash)
+            val finalVpnConfig = vpnConfig ?: clashConfig
+
             val fixable = buildList {
                 // Критические проверки работы VPN — в приоритете
                 add(exitIpCheck)
@@ -117,7 +144,7 @@ class ScanOrchestrator @Inject constructor(
             val verdict = tsupAssessor.buildVerdict(
                 fixable = fixable,
                 activeClient = activeClient,
-                vpnConfig = vpnConfig,
+                vpnConfig = finalVpnConfig,
                 mtu = iface.vpnInterfaces.firstOrNull()?.mtu ?: 1500
             )
 
@@ -128,7 +155,7 @@ class ScanOrchestrator @Inject constructor(
                 fixable       = fixable,
                 deviceInfo    = deviceInfo,
                 activeClient  = activeClient,
-                vpnConfig     = vpnConfig,
+                vpnConfig     = finalVpnConfig,
                 overallVerdict = verdict,
                 isScanning    = false
             ))

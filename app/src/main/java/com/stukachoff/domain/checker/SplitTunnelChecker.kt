@@ -29,6 +29,11 @@ class SplitTunnelCheckerImpl @Inject constructor(
 ) {
     suspend fun check(): CheckResult.Fixable = withContext(Dispatchers.IO) {
         val cm = context.getSystemService(ConnectivityManager::class.java)
+            ?: return@withContext CheckResult.Fixable(
+                id = "split_tunnel", title = "Маршрутизация (Split-Tunnel)",
+                status = CheckStatus.GREEN, harm = "Статус не определён",
+                harmSeverity = HarmSeverity.INFO
+            )
 
         val allNetworks = cm.allNetworks
         val vpnCount = allNetworks.count { network ->
