@@ -6,8 +6,9 @@ import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.HarmSeverity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class DnsCheckerImpl : DnsChecker {
+class DnsCheckerImpl @Inject constructor() : DnsChecker {
 
     fun classifyDns(ip: String): CheckStatus = when {
         ip.startsWith("10.")   -> CheckStatus.GREEN  // VPN туннель (RFC 1918)
