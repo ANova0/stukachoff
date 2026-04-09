@@ -6,8 +6,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalContext
+import com.stukachoff.data.export.ReportExporter
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +51,10 @@ fun VerifyScreen(
             return@LazyColumn
         }
 
+        if (state.vpnStatus == VpnStatus.CORPORATE_VPN) {
+            item { CorporateVpnMessage() }
+        }
+
         if (state.alwaysVisible.isNotEmpty()) {
             item { AlwaysVisibleSection(state.alwaysVisible, state.deviceInfo) }
         }
@@ -73,22 +82,37 @@ fun VerifyScreen(
         }
 
         item {
-            Button(
-                onClick = { viewModel.scan() },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                enabled = !state.isScanning
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (state.isScanning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick  = { viewModel.scan() },
+                    modifier = Modifier.weight(1f),
+                    enabled  = !state.isScanning
+                ) {
+                    if (state.isScanning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (state.isScanning) "Проверяю..." else "Проверить снова")
                 }
-                Text(if (state.isScanning) "Проверяю..." else "Проверить снова")
+                // Кнопка поделиться отчётом
+                if (state.fixable.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick  = { viewModel.shareReport() },
+                        modifier = Modifier.wrapContentWidth()
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Поделиться",
+                            modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
     }
@@ -127,6 +151,28 @@ fun NotActiveMessage() {
             Text(
                 "Stukachoff показывает реальную картину только при активном VPN-соединении.",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun CorporateVpnMessage() {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1565C0).copy(alpha = 0.1f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("🏢 Корпоративный VPN", style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Обнаружен MDM или корпоративный VPN. Проверки настроены для пользовательских " +
+                "VPN-клиентов — некоторые результаты могут отличаться.",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -25,6 +25,7 @@ import com.stukachoff.ui.update.UpdateViewModel
 @Composable
 fun SettingsScreen(
     onOpenOnboarding: () -> Unit,
+    onOpenAbout: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     updateViewModel: UpdateViewModel = hiltViewModel()
 ) {
@@ -95,10 +96,10 @@ fun SettingsScreen(
                     onClick = onOpenOnboarding
                 )
                 SettingsItem(
-                    icon    = Icons.Default.Info,
-                    title   = "О приложении",
-                    subtitle = "Версия ${BuildConfig.VERSION_NAME} · Open Source",
-                    onClick = {}
+                    icon     = Icons.Default.Info,
+                    title    = "О приложении",
+                    subtitle = "Версия ${BuildConfig.VERSION_NAME} · MIT · Open Source",
+                    onClick  = onOpenAbout
                 )
             }
         }

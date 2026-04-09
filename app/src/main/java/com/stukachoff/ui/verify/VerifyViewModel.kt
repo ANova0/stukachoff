@@ -2,6 +2,9 @@ package com.stukachoff.ui.verify
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import android.content.Intent
+import com.stukachoff.data.export.ReportExporter
 import com.stukachoff.data.network.DnsCheckerImpl
 import com.stukachoff.data.network.ExitIpChecker
 import com.stukachoff.data.network.PortScannerImpl
@@ -11,6 +14,7 @@ import com.stukachoff.domain.checker.InterfaceCheckerImpl
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.ScanState
 import com.stukachoff.domain.usecase.ScanOrchestrator
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -23,10 +27,12 @@ private const val MIN_SCAN_DURATION_MS = 7_000L
 
 @HiltViewModel
 class VerifyViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val orchestrator: ScanOrchestrator,
     private val exitIpChecker: ExitIpChecker,
     private val androidVersionChecker: AndroidVersionChecker,
-    private val dnsChecker: DnsCheckerImpl
+    private val dnsChecker: DnsCheckerImpl,
+    private val reportExporter: ReportExporter
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ScanState())
@@ -59,6 +65,12 @@ class VerifyViewModel @Inject constructor(
             _state.value = result
             _showScanning.value = false
         }
+    }
+
+    fun shareReport() {
+        val intent = reportExporter.buildShareIntent(_state.value)
+        context.startActivity(Intent.createChooser(intent, "Поделиться отчётом")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     /**

@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.stukachoff.ui.about.AboutScreen
 import com.stukachoff.ui.learn.LearnScreen
 import com.stukachoff.ui.onboarding.OnboardingScreen
 import com.stukachoff.ui.settings.SettingsScreen
@@ -21,6 +22,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector?
     object Threats     : Screen("threats", "Стукачи", Icons.Default.List)
     object Settings    : Screen("settings", "Меню", Icons.Default.Menu)
     object Onboarding  : Screen("onboarding", "Онбординг")
+    object About       : Screen("about", "О приложении")
     object Learn       : Screen("learn/{checkId}", "Как исправить") {
         fun route(checkId: String) = "learn/$checkId"
     }
@@ -54,9 +56,14 @@ fun StukachoffNavHost(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onOpenOnboarding = {
-                navController.navigate(Screen.Onboarding.route)
-            })
+            SettingsScreen(
+                onOpenOnboarding = { navController.navigate(Screen.Onboarding.route) },
+                onOpenAbout      = { navController.navigate(Screen.About.route) }
+            )
+        }
+
+        composable(Screen.About.route) {
+            AboutScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Learn.route) { backStack ->
@@ -70,7 +77,8 @@ fun StukachoffNavHost(
 fun BottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     // Не показываем нижнюю панель на онбординге и экране LEARN
     if (currentRoute == Screen.Onboarding.route ||
-        currentRoute?.startsWith("learn/") == true) return
+        currentRoute?.startsWith("learn/") == true ||
+        currentRoute == Screen.About.route) return
 
     NavigationBar {
         bottomNavItems.forEach { screen ->
