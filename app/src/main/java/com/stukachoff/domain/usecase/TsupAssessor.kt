@@ -19,8 +19,12 @@ class TsupAssessor @Inject constructor() {
     fun assessTsup(
         activeClient: ActiveClient?,
         vpnConfig: VpnConfig?,
-        mtu: Int
+        mtu: Int,
+        exitIpAnalysis: com.stukachoff.data.network.IpAnalyzer.IpAnalysis? = null
     ): Pair<ProtectionLevel, String> {
+        // WARP обёртка или Relay повышают оценку
+        val warpBonus = exitIpAnalysis?.isCloudflare == true
+        val relayBonus = exitIpAnalysis?.isRussian == true
         // Use config data if available (more accurate)
         if (vpnConfig != null && vpnConfig.outbounds.isNotEmpty()) {
             val ob = vpnConfig.outbounds.first()
@@ -39,14 +43,21 @@ class TsupAssessor @Inject constructor() {
         // Fallback: by client + MTU
         if (activeClient == null) return ProtectionLevel.MEDIUM to "Клиент не определён"
 
-        return when {
+        val suffix = when {
+            warpBonus && relayBonus -> " + WARP + Relay РФ"
+            warpBonus               -> " + WARP обёртка (IP скрыт)"
+            relayBonus              -> " + Relay через РФ"
+            else                    -> ""
+        }
+
+        val (baseLevel, baseDesc) = when {
             activeClient.engine == VpnEngine.AMNEZIA ->
-                ProtectionLevel.HIGH to "AmneziaWG — высокая устойчивость (junk packets)"
+                ProtectionLevel.HIGH to "AmneziaWG — высокая устойчивость"
             activeClient.engine == VpnEngine.TOR ->
                 ProtectionLevel.HIGH to "Tor — максимальная анонимность"
             activeClient.engine == VpnEngine.XRAY || activeClient.engine == VpnEngine.SINGBOX ->
                 ProtectionLevel.MEDIUM to
-                    "${activeClient.displayName} — зависит от протокола в конфиге провайдера"
+                    "${activeClient.displayName} — зависит от протокола провайдера"
             activeClient.engine == VpnEngine.WIREGUARD ->
                 ProtectionLevel.LOW to "WireGuard блокируется ТСПУ с декабря 2025"
             activeClient.engine == VpnEngine.OPENVPN ->
@@ -56,13 +67,25 @@ class TsupAssessor @Inject constructor() {
             else -> ProtectionLevel.MEDIUM to
                 "${activeClient.displayName} — устойчивость неизвестна"
         }
+
+        // WARP или Relay повышают оценку на один уровень
+        val boostedLevel = if (warpBonus || relayBonus) {
+            when (baseLevel) {
+                ProtectionLevel.LOW      -> ProtectionLevel.MEDIUM
+                ProtectionLevel.MEDIUM   -> ProtectionLevel.HIGH
+                else -> baseLevel
+            }
+        } else baseLevel
+
+        return boostedLevel to "$baseDesc$suffix"
     }
 
     fun buildVerdict(
         fixable: List<CheckResult.Fixable>,
         activeClient: ActiveClient?,
         vpnConfig: VpnConfig?,
-        mtu: Int
+        mtu: Int,
+        exitIpAnalysis: com.stukachoff.data.network.IpAnalyzer.IpAnalysis? = null
     ): OverallVerdict {
         val criticals = fixable.filter {
             it.status == CheckStatus.RED && it.harmSeverity == HarmSeverity.CRITICAL
@@ -85,7 +108,7 @@ class TsupAssessor @Inject constructor() {
             ProtectionLevel.HIGH     -> "Конфигурация защищена"
         }
 
-        val (tsupLevel, tsupDetails) = assessTsup(activeClient, vpnConfig, mtu)
+        val (tsupLevel, tsupDetails) = assessTsup(activeClient, vpnConfig, mtu, exitIpAnalysis)
 
         return OverallVerdict(
             appProtection    = appLevel,

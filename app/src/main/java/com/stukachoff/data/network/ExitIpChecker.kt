@@ -74,6 +74,9 @@ class ExitIpChecker @Inject constructor() {
 }
 
 sealed class ExitIpCheckResult {
-    data class Success(val ip: String) : ExitIpCheckResult()
+    data class Success(
+        val ip: String,
+        val ipAnalysis: IpAnalyzer.IpAnalysis = IpAnalyzer.analyze(ip)
+    ) : ExitIpCheckResult()
     data class Failed(val reason: String) : ExitIpCheckResult()
 }

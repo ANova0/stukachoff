@@ -138,7 +138,9 @@ class ScanOrchestrator @Inject constructor(
             }.sortedByDescending { it.harmSeverity.ordinal }
 
             val mtu = iface.vpnInterfaces.firstOrNull()?.mtu ?: 1500
-            val verdict = tsupAssessor.buildVerdict(fixable, activeClient, finalVpnConfig, mtu)
+            // IP-анализ для WARP/Relay бонуса
+            val ipAnalysis = (exitIp as? ExitIpCheckResult.Success)?.ipAnalysis
+            val verdict = tsupAssessor.buildVerdict(fixable, activeClient, finalVpnConfig, mtu, ipAnalysis)
 
             // Определяем маркировку КАК получили конфиг
             val accessMethod = when {
@@ -174,12 +176,17 @@ class ScanOrchestrator @Inject constructor(
         val routingOk = routing.status == CheckStatus.GREEN
 
         return when {
-            exitIpOk && routingOk -> CheckResult.Fixable(
-                id = "vpn_works", title = "VPN работает",
-                status = CheckStatus.GREEN,
-                harm = "Трафик маршрутизируется · Exit IP: ${(exitIp as ExitIpCheckResult.Success).ip}",
-                harmSeverity = HarmSeverity.INFO
-            )
+            exitIpOk && routingOk -> {
+                val success = exitIp as ExitIpCheckResult.Success
+                val analysis = success.ipAnalysis
+                val warpInfo = if (analysis.isCloudflare) " · 🛡️ WARP обёртка" else ""
+                CheckResult.Fixable(
+                    id = "vpn_works", title = "VPN работает",
+                    status = CheckStatus.GREEN,
+                    harm = "Exit IP: ${success.ip}$warpInfo · ${analysis.description}",
+                    harmSeverity = HarmSeverity.INFO
+                )
+            }
             exitIpOk && !routingOk -> CheckResult.Fixable(
                 id = "vpn_works", title = "VPN работает",
                 status = CheckStatus.YELLOW,
@@ -230,10 +237,22 @@ class ScanOrchestrator @Inject constructor(
             explanation = "Если VPN маршрутизирует трафик — заблокированные сайты открываются. " +
                     "Приложения проверяют это косвенно.",
             knowsWhat   = when (exitIp) {
-                is ExitIpCheckResult.Success -> "Доступны · через ${exitIp.ip}"
+                is ExitIpCheckResult.Success -> {
+                    val a = exitIp.ipAnalysis
+                    when {
+                        a.isCloudflare -> "Доступны · ${exitIp.ip} (Cloudflare WARP — реальный IP скрыт)"
+                        a.isRussian    -> "Доступны · ${exitIp.ip} (Relay через РФ — качественная инфраструктура)"
+                        else           -> "Доступны · через ${exitIp.ip}"
+                    }
+                }
                 is ExitIpCheckResult.Failed  -> "Не проверено — ${exitIp.reason}"
             },
-            doesntKnow  = "Какой именно сервер"
+            doesntKnow  = when (exitIp) {
+                is ExitIpCheckResult.Success ->
+                    if (exitIp.ipAnalysis.isCloudflare) "Реальный IP сервера (скрыт за WARP)"
+                    else "Какой именно сервер"
+                else -> "Какой именно сервер"
+            }
         )
     )
 }
