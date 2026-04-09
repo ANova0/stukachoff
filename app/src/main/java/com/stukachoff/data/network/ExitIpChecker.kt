@@ -1,6 +1,5 @@
 package com.stukachoff.data.network
 
-import com.stukachoff.data.prefs.AppPreferences
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.HarmSeverity
@@ -12,50 +11,69 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Единственный надёжный тест реальной работы VPN-туннеля.
+ * Запускается ВСЕГДА (не зависит от "режима автообновления") —
+ * это диагностический тест, не телеметрия.
+ *
+ * Если VPN маршрутизирует трафик → запрос идёт через туннель → показываем exit IP (IP сервера)
+ * Если VPN сломан (TLS error, нет туннелинга) → запрос идёт напрямую или падает
+ */
 @Singleton
-class ExitIpChecker @Inject constructor(
-    private val prefs: AppPreferences
-) {
+class ExitIpChecker @Inject constructor() {
+
     private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
         .build()
 
-    suspend fun check(): CheckResult.Fixable {
-        if (prefs.privacyModeEnabled) {
-            return CheckResult.Fixable(
-                id           = "exit_ip",
-                title        = "Exit IP (отключено)",
-                status       = CheckStatus.YELLOW,
-                harm         = "Включи сетевой режим в настройках чтобы проверить exit IP",
-                harmSeverity = HarmSeverity.INFO
-            )
-        }
+    suspend fun check(): ExitIpCheckResult = withContext(Dispatchers.IO) {
+        runCatching {
+            val request = Request.Builder()
+                .url("https://api.ipify.org?format=text")
+                .header("User-Agent", "Mozilla/5.0")
+                .build()
+            val response = client.newCall(request).execute()
+            val ip = response.body?.string()?.trim() ?: ""
 
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                val request = Request.Builder()
-                    .url("https://api.ipify.org?format=text")
-                    .header("User-Agent", "Mozilla/5.0")
-                    .build()
-                val ip = client.newCall(request).execute().body?.string()?.trim() ?: ""
-                CheckResult.Fixable(
-                    id           = "exit_ip",
-                    title        = "Exit IP через туннель",
-                    status       = if (ip.isNotBlank()) CheckStatus.GREEN else CheckStatus.YELLOW,
-                    harm         = if (ip.isNotBlank()) "VPN работает · exit IP: $ip"
-                                   else "Не удалось определить exit IP",
-                    harmSeverity = HarmSeverity.INFO
-                )
-            }.getOrElse {
-                CheckResult.Fixable(
-                    id           = "exit_ip",
-                    title        = "Exit IP через туннель",
-                    status       = CheckStatus.YELLOW,
-                    harm         = "Ошибка: ${it.message}",
-                    harmSeverity = HarmSeverity.INFO
-                )
+            if (ip.isBlank()) {
+                ExitIpCheckResult.Failed("Пустой ответ от сервера")
+            } else {
+                ExitIpCheckResult.Success(ip)
             }
+        }.getOrElse { e ->
+            val msg = when {
+                e.message?.contains("Unable to resolve host") == true ->
+                    "DNS не работает — VPN не маршрутизирует трафик"
+                e.message?.contains("timeout") == true ->
+                    "Таймаут — VPN не отвечает"
+                e.message?.contains("HANDSHAKE") == true ->
+                    "TLS ошибка — VPN некорректно настроен"
+                else -> e.message ?: "Неизвестная ошибка"
+            }
+            ExitIpCheckResult.Failed(msg)
         }
     }
+
+    fun toCheckResult(result: ExitIpCheckResult): CheckResult.Fixable = CheckResult.Fixable(
+        id           = "exit_ip",
+        title        = "VPN маршрутизирует трафик",
+        status       = when (result) {
+            is ExitIpCheckResult.Success -> CheckStatus.GREEN
+            is ExitIpCheckResult.Failed  -> CheckStatus.RED
+        },
+        harm         = when (result) {
+            is ExitIpCheckResult.Success -> "Работает · Exit IP: ${result.ip}"
+            is ExitIpCheckResult.Failed  -> "⚠️ ${result.reason}"
+        },
+        harmSeverity = when (result) {
+            is ExitIpCheckResult.Success -> HarmSeverity.INFO
+            is ExitIpCheckResult.Failed  -> HarmSeverity.CRITICAL
+        }
+    )
+}
+
+sealed class ExitIpCheckResult {
+    data class Success(val ip: String) : ExitIpCheckResult()
+    data class Failed(val reason: String) : ExitIpCheckResult()
 }

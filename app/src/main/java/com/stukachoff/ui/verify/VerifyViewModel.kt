@@ -80,7 +80,7 @@ class VerifyViewModel @Inject constructor(
         viewModelScope.launch {
             _recheckingId.value = checkId
             val newCheck: CheckResult.Fixable? = when (checkId) {
-                "exit_ip"        -> exitIpChecker.check()
+                "exit_ip"        -> exitIpChecker.toCheckResult(exitIpChecker.check())
                 "android_version" -> androidVersionChecker.check()
                 "dns_leak"       -> dnsChecker.check()
                 "system_proxy"   -> SystemProxyAnalyzer.check()
