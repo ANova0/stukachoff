@@ -53,7 +53,7 @@ fun SettingsScreen(
                     ?.let { updateViewModel.installApk(it) }
             },
             onOpenGitHub = { updateViewModel.openGitHubReleases() },
-            onDismiss    = { showUpdateDialog = false }
+            onDismiss    = { showUpdateDialog = false; updateViewModel.resetState() }
         )
     }
 

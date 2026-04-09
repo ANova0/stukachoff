@@ -85,7 +85,7 @@ class PortScannerImpl : PortScanner {
     override suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
         val semaphore = Semaphore(FULL_SCAN_CONCURRENCY)
         coroutineScope {
-            (1024..65535).map { port ->
+            (1..65535).map { port ->
                 async {
                     semaphore.withPermit {
                         if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))

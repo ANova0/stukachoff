@@ -167,7 +167,7 @@ fun VerifyScreen(
                     onClick = { viewModel.deepScan() },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    Text("🔍 Глубокое сканирование (1024-65535)")
+                    Text("🔍 Глубокое сканирование всех портов (1-65535)")
                 }
             }
         }
@@ -182,9 +182,27 @@ fun VerifyScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Найдено в глубоком скане: ${fullScanPorts.size} открытых портов")
-                        fullScanPorts.take(10).forEach { p ->
-                            Text("• Порт ${p.port}: ${p.description}", style = MaterialTheme.typography.bodySmall)
+                        Text("Глубокий скан: ${fullScanPorts.size} открытых портов",
+                            fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Каждый открытый порт — потенциальная точка входа для стукачей",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        fullScanPorts.take(15).forEach { p ->
+                            val risk = when (p.category) {
+                                com.stukachoff.domain.checker.PortCategory.XRAY_GRPC ->
+                                    "⚠️ API управления — ключи и IP доступны"
+                                com.stukachoff.domain.checker.PortCategory.CLASH_API ->
+                                    "⚠️ API конфигурации — история соединений"
+                                com.stukachoff.domain.checker.PortCategory.SOCKS5,
+                                com.stukachoff.domain.checker.PortCategory.HTTP_PROXY,
+                                com.stukachoff.domain.checker.PortCategory.MIXED ->
+                                    "Прокси-порт — виден без разрешений"
+                                else -> "Открытый TCP-сервис"
+                            }
+                            Text("• ${p.port}: ${p.description} — $risk",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

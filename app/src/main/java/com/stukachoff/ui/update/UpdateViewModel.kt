@@ -76,6 +76,10 @@ class UpdateViewModel @Inject constructor(
         context.startActivity(intent)
     }
 
+    fun resetState() {
+        _state.value = UpdateUiState.Idle
+    }
+
     fun openGitHubReleases() {
         val intent = Intent(Intent.ACTION_VIEW,
             Uri.parse("https://github.com/ANova0/stukachoff/releases/latest")).apply {
