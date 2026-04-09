@@ -26,6 +26,9 @@ jobs:
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/libs.versions.toml') }}
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
@@ -58,6 +61,9 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
 
       # Собираем подписанный release APK
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build signed Release APK
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
