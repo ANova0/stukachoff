@@ -46,6 +46,7 @@ fun VerifyScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
+        // === 1. Статус VPN (узкая полоска) ===
         item { VpnStatusBanner(state.vpnStatus, state.isScanning) }
 
         if (state.vpnStatus == VpnStatus.NOT_ACTIVE) {
@@ -57,35 +58,28 @@ fun VerifyScreen(
             item { CorporateVpnMessage() }
         }
 
-        // Активный клиент — показываем ЯВНО
+        // === 2. Активный клиент (компактно) ===
         state.activeClient?.let { client ->
             item { ActiveClientBanner(client) }
         }
 
+        // === 3. Вердикт (главное — сразу видно) ===
         state.overallVerdict?.let { verdict ->
             item { OverallVerdictCard(verdict = verdict) }
         }
-        state.vpnConfig?.takeIf { it.outbounds.isNotEmpty() }?.let { config ->
-            item { ConfigRevealCard(config = config, accessMethod = state.configAccessMethod) }
-        }
 
-        if (state.alwaysVisible.isNotEmpty()) {
-            item { AlwaysVisibleSection(state.alwaysVisible, state.deviceInfo) }
-        }
-
+        // === 4. Проблемы (RED/YELLOW) или "Всё ок" ===
         if (state.fixable.isNotEmpty()) {
-            // FIX-5: Показываем ТОЛЬКО проблемы (RED/YELLOW)
             val issues = state.fixable.filter { it.status != CheckStatus.GREEN }
-            val allGreen = issues.isEmpty()
 
-            if (!allGreen) {
+            if (issues.isNotEmpty()) {
                 item {
                     Text(
                         "Найдены уязвимости",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF44336),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
                 }
                 items(issues) { check ->
@@ -98,33 +92,43 @@ fun VerifyScreen(
                 }
             } else {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF1B5E20).copy(alpha = 0.1f)
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("✅", fontSize = 40.sp)
-                            Spacer(Modifier.height(8.dp))
+                        Text("✅", fontSize = 24.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column {
                             Text("Проблем не обнаружено",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold)
-                            Text("Все ${state.fixable.size} проверок пройдены",
+                            Text("${state.fixable.size} проверок пройдены",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
+        }
 
-            // Технические детали — GREEN проверки + полный дамп
+        // === 5. Конфиг VPN (если gRPC прочитан) ===
+        state.vpnConfig?.takeIf { it.outbounds.isNotEmpty() }?.let { config ->
+            item { ConfigRevealCard(config = config, accessMethod = state.configAccessMethod) }
+        }
+
+        // === 6. "Что видят приложения" — КОМПАКТНАЯ строка, по тапу разворачивается ===
+        if (state.alwaysVisible.isNotEmpty()) {
+            item { CompactAlwaysVisibleSection(state.alwaysVisible) }
+        }
+
+        // === 7. Технические детали (collapsed) ===
+        if (state.fixable.isNotEmpty()) {
             item { TechnicalDetailsCard(state) }
         }
 
+        // === 8. Кнопки ===
         item {
             Row(
                 modifier = Modifier
@@ -137,17 +141,8 @@ fun VerifyScreen(
                     modifier = Modifier.weight(1f),
                     enabled  = !state.isScanning
                 ) {
-                    if (state.isScanning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
                     Text(if (state.isScanning) "Проверяю..." else "Проверить снова")
                 }
-                // Кнопка поделиться отчётом
                 if (state.fixable.isNotEmpty()) {
                     OutlinedButton(
                         onClick  = { viewModel.shareReport() },
@@ -160,6 +155,7 @@ fun VerifyScreen(
             }
         }
 
+        // === 9. Deep Scan ===
         // Deep Scan button
         if (!isDeepScanning && fullScanPorts.isEmpty()) {
             item {
@@ -189,7 +185,8 @@ fun VerifyScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(8.dp))
-                        fullScanPorts.take(15).forEach { p ->
+                        val shownPorts = fullScanPorts.take(15)
+                        shownPorts.forEach { p ->
                             val risk = when (p.category) {
                                 com.stukachoff.domain.checker.PortCategory.XRAY_GRPC ->
                                     "⚠️ API управления — ключи и IP доступны"
@@ -203,6 +200,13 @@ fun VerifyScreen(
                             }
                             Text("• ${p.port}: ${p.description} — $risk",
                                 style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (fullScanPorts.size > 15) {
+                            Text("... и ещё ${fullScanPorts.size - 15} портов",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }
@@ -261,7 +265,7 @@ fun NotActiveMessage(onScan: () -> Unit = {}) {
             colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
             shape    = RoundedCornerShape(14.dp)
         ) {
-            Text("Сканировать устройство", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Обновить статус", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
@@ -317,6 +321,101 @@ fun CorporateVpnMessage() {
             )
         }
     }
+}
+
+/**
+ * Компактный инфоблок "Что видят приложения" — одна строка,
+ * разворачивается по тапу. Не доминирует визуально.
+ */
+@Composable
+fun CompactAlwaysVisibleSection(checks: List<CheckResult.AlwaysVisible>) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCheck by remember { mutableStateOf<CheckResult.AlwaysVisible?>(null) }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        // Компактная строка — тап разворачивает
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("ℹ️", fontSize = 16.sp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Что видят все приложения",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                if (expanded) "↑" else "↓",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                checks.forEach { check ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(check.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium)
+                            Text(check.knowsWhat,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2)
+                        }
+                        TextButton(
+                            onClick = { selectedCheck = check },
+                            contentPadding = PaddingValues(4.dp),
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Text("?", fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+                Text(
+                    "Скрыть без root невозможно — это архитектура Android",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+
+    // Диалог пояснения при тапе на (?)
+    selectedCheck?.let { check ->
+        AlertDialog(
+            onDismissRequest = { selectedCheck = null },
+            title = { Text(check.title) },
+            text = {
+                Column {
+                    Text(check.explanation, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text("✅ Знают: ${check.knowsWhat}",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("❌ Не знают: ${check.doesntKnow}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedCheck = null }) { Text("Понятно") }
+            }
+        )
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 }
 
 @Composable

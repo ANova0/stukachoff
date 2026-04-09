@@ -77,7 +77,7 @@ fun StukachoffNavHost(
 
         composable(Screen.Learn.route) { backStack ->
             val checkId = backStack.arguments?.getString("checkId") ?: ""
-            LearnScreen(checkId = checkId)
+            LearnScreen(checkId = checkId, onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Tutorial.route) {

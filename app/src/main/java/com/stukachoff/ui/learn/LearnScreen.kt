@@ -1,12 +1,15 @@
 package com.stukachoff.ui.learn
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -18,19 +21,36 @@ import com.stukachoff.ui.common.GlossaryText
 private const val BOT_USERNAME = "YOUR_BOT_NAME"
 private const val BOT_DEEP_LINK_BASE = "https://t.me/$BOT_USERNAME?start=stukachoff_fix_"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LearnScreen(checkId: String) {
+fun LearnScreen(checkId: String, onBack: (() -> Unit)? = null) {
     val content = learnContent[checkId]
     val context = LocalContext.current
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Как исправить") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        onBack?.invoke() ?: (context as? Activity)?.onBackPressed()
+                    }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    }
+                }
+            )
+        }
+    ) { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(padding)
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         if (content == null) {
-            Text("Инструкция не найдена для: $checkId")
+            Text("Инструкция для \"$checkId\" ещё не создана",
+                style = MaterialTheme.typography.bodyLarge)
             return@Column
         }
 
@@ -87,6 +107,7 @@ fun LearnScreen(checkId: String) {
             }
         }
     }
+    } // Scaffold
 }
 
 data class LearnContent(

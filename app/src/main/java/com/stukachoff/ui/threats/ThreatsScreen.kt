@@ -94,20 +94,16 @@ fun ThreatsScreen(viewModel: ThreatsViewModel = hiltViewModel()) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Button(
+            OutlinedButton(
                 onClick = {
-                Toast.makeText(context, "В разработке — появится с обновлением", Toast.LENGTH_SHORT).show()
-            },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF44336)
-                ),
-                shape = RoundedCornerShape(14.dp)
+                    Toast.makeText(context, "Скоро — появится с обновлением", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     "🛡️ Получить план защиты",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
             }
         }

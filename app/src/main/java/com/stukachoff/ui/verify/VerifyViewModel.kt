@@ -113,6 +113,11 @@ class VerifyViewModel @Inject constructor(
                     }
                 }
                 "mtu"            -> interfaceChecker.check().mtuResult
+                // Перезапуск всего скана для сложных проверок
+                "split_tunnel", "vpn_works", "work_profile" -> {
+                    scan() // полный ресканирование
+                    null   // scan() обновит весь state
+                }
                 else             -> null
             }
 
