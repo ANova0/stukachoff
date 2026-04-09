@@ -1,12 +1,14 @@
 package com.stukachoff.data.network
 
+import android.content.Context
 import com.stukachoff.domain.model.CheckStatus
+import io.mockk.mockk
 import org.junit.Assert.*
 import org.junit.Test
 
 class DnsCheckerImplTest {
 
-    private val checker = DnsCheckerImpl()
+    private val checker = DnsCheckerImpl(mockk<Context>(relaxed = true))
 
     @Test
     fun `10_x is VPN tunnel — GREEN`() {

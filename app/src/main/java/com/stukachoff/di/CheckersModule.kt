@@ -31,5 +31,5 @@ object CheckersModule {
     fun provideInterfaceChecker(): InterfaceChecker = InterfaceCheckerImpl()
 
     @Provides @Singleton
-    fun provideDnsChecker(): DnsChecker = DnsCheckerImpl()
+    fun provideDnsChecker(@ApplicationContext ctx: Context): DnsChecker = DnsCheckerImpl(ctx)
 }

@@ -65,9 +65,29 @@ class PortScannerImpl : PortScanner {
         )
     }
 
-    private fun isPortOpen(port: Int): Boolean = try {
+    suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
+        val FULL_SCAN_RANGE = 1024..65535
+        val WORKERS = 50
+        val TIMEOUT_MS = 100
+
+        val portList = FULL_SCAN_RANGE.toList()
+        val chunkSize = (portList.size / WORKERS) + 1
+        val chunks = portList.chunked(chunkSize)
+
+        chunks.flatMap { chunk ->
+            chunk.mapNotNull { port ->
+                if (isPortOpen(port, TIMEOUT_MS)) {
+                    OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
+                } else null
+            }
+        }
+    }
+
+    private fun isPortOpen(port: Int): Boolean = isPortOpen(port, connectTimeoutMs)
+
+    private fun isPortOpen(port: Int, timeoutMs: Int): Boolean = try {
         Socket().use { socket ->
-            socket.connect(InetSocketAddress("127.0.0.1", port), connectTimeoutMs)
+            socket.connect(InetSocketAddress("127.0.0.1", port), timeoutMs)
             true
         }
     } catch (_: Exception) { false }
