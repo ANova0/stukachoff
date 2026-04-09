@@ -9,6 +9,9 @@ import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.HarmSeverity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -66,20 +69,14 @@ class PortScannerImpl : PortScanner {
     }
 
     suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
-        val FULL_SCAN_RANGE = 1024..65535
-        val WORKERS = 50
-        val TIMEOUT_MS = 100
-
-        val portList = FULL_SCAN_RANGE.toList()
-        val chunkSize = (portList.size / WORKERS) + 1
-        val chunks = portList.chunked(chunkSize)
-
-        chunks.flatMap { chunk ->
-            chunk.mapNotNull { port ->
-                if (isPortOpen(port, TIMEOUT_MS)) {
-                    OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
-                } else null
-            }
+        coroutineScope {
+            (1024..65535).map { port ->
+                async {
+                    if (isPortOpen(port, 100)) {
+                        OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
+                    } else null
+                }
+            }.awaitAll().filterNotNull()
         }
     }
 
