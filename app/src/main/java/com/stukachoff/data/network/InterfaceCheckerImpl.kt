@@ -50,7 +50,7 @@ class InterfaceCheckerImpl : InterfaceChecker {
             vpnInterfaces = vpnIfaces,
             mtuResult = CheckResult.Fixable(
                 id = "mtu",
-                title = "MTU fingerprint",
+                title = "Размер пакетов",
                 status = mtuStatus,
                 harm = "ТСПУ и приложения определяют тип VPN-протокола по размеру пакетов",
                 harmSeverity = HarmSeverity.MEDIUM

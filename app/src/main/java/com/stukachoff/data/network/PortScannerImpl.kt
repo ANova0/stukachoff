@@ -55,7 +55,7 @@ class PortScannerImpl : PortScanner {
             openKnownPorts = openPorts,
             grpcApiResult = CheckResult.Fixable(
                 id = "grpc_api",
-                title = "xray gRPC API",
+                title = "API управления VPN",
                 status = if (grpcOpen) CheckStatus.RED else CheckStatus.GREEN,
                 harm = "IP сервера, UUID, ключи Reality → деанон пользователя + сервер в блоклист РКН",
                 harmSeverity = HarmSeverity.CRITICAL,
@@ -63,7 +63,7 @@ class PortScannerImpl : PortScanner {
             ),
             clashApiResult = CheckResult.Fixable(
                 id = "clash_api",
-                title = "Clash / Mihomo REST API",
+                title = "API конфигурации",
                 status = if (clashOpen) CheckStatus.RED else CheckStatus.GREEN,
                 harm = "История всех соединений и IP серверов доступны без пароля",
                 harmSeverity = HarmSeverity.HIGH,

@@ -74,26 +74,54 @@ fun VerifyScreen(
         }
 
         if (state.fixable.isNotEmpty()) {
-            item {
-                val hasIssues = state.fixable.any { it.status != CheckStatus.GREEN }
-                Text(
-                    if (hasIssues) "Найдены уязвимости" else "Проверки",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (hasIssues) Color(0xFFF44336) else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
-                )
-            }
-            items(state.fixable) { check ->
-                CheckCard(
-                    check        = check,
-                    isRechecking = recheckingId == check.id,
-                    onLearnMore  = onLearnMore,
-                    onRecheck    = { viewModel.recheckSingle(check.id) }
-                )
+            // FIX-5: Показываем ТОЛЬКО проблемы (RED/YELLOW)
+            val issues = state.fixable.filter { it.status != CheckStatus.GREEN }
+            val allGreen = issues.isEmpty()
+
+            if (!allGreen) {
+                item {
+                    Text(
+                        "Найдены уязвимости",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF44336),
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
+                    )
+                }
+                items(issues) { check ->
+                    CheckCard(
+                        check        = check,
+                        isRechecking = recheckingId == check.id,
+                        onLearnMore  = onLearnMore,
+                        onRecheck    = { viewModel.recheckSingle(check.id) }
+                    )
+                }
+            } else {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF1B5E20).copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("✅", fontSize = 40.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Проблем не обнаружено",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold)
+                            Text("Все ${state.fixable.size} проверок пройдены",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
 
-            // Технические детали — полный дамп
+            // Технические детали — GREEN проверки + полный дамп
             item { TechnicalDetailsCard(state) }
         }
 
@@ -447,6 +475,15 @@ fun CheckCard(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
+        // FIX-7: Кнопка (?) — расшифровка термина через Learn
+        TextButton(
+            onClick = { onLearnMore(check.id) },
+            contentPadding = PaddingValues(2.dp),
+            modifier = Modifier.size(28.dp)
+        ) {
+            Text("?", fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary)
+        }
         if (check.harmSeverity == HarmSeverity.CRITICAL && check.status == CheckStatus.RED) {
             Surface(
                 color = Color(0xFFF44336),

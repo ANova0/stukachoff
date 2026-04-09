@@ -181,15 +181,66 @@ val learnContent = mapOf(
         )
     ),
     "mtu" to LearnContent(
-        title = "MTU fingerprint",
+        title = "Размер пакетов (MTU)",
         what = "Размер пакетов (MTU) на VPN-интерфейсе отличается от стандартного (1500). " +
-                "WireGuard использует 1420, некоторые настройки — 1280 и ниже. " +
-                "По этому числу ТСПУ и приложения определяют тип VPN.",
-        harm = "ТСПУ точнее идентифицирует протокол. Помогает при блокировке.",
+                "WireGuard использует 1420, AmneziaWG — 1280. " +
+                "По этому числу ТСПУ определяет тип VPN-протокола.",
+        harm = "ТСПУ точнее идентифицирует протокол и может его заблокировать.",
         fixes = listOf(
-            ClientFix("AmneziaWG", "Установить MTU = 1280 в настройках тоннеля"),
-            ClientFix("xray TUN", "В конфиге: tun.mtu = 1500"),
-            ClientFix("sing-box", "В конфиге: tun.mtu = 1500")
+            ClientFix("AmneziaWG", "MTU = 1280 — это нормально для AmneziaWG"),
+            ClientFix("WireGuard", "Настройки туннеля → MTU = 1280 (менее заметно)"),
+            ClientFix("Hiddify", "Настройки → tun.mtu = 1500 (стандартный)")
+        )
+    ),
+    "split_tunnel" to LearnContent(
+        title = "Все приложения через VPN",
+        what = "Часть приложений идёт мимо VPN-туннеля (split-tunnel). " +
+                "Приложения в bypass делают запросы напрямую — могут определить VPN " +
+                "по доступности заблокированных сайтов.",
+        harm = "VK, Сбер и другие приложения в bypass детектируют VPN через HTTP-пробы.",
+        fixes = listOf(
+            ClientFix("Hiddify", "Настройки → Маршрутизация → Route all traffic"),
+            ClientFix("v2rayNG", "Настройки → Per-app proxy → отключить"),
+            ClientFix("NekoBox", "Route all apps through proxy"),
+            ClientFix("WireGuard", "AllowedIPs = 0.0.0.0/0, ::/0"),
+            ClientFix("AmneziaWG", "AllowedIPs = 0.0.0.0/0, ::/0"),
+            ClientFix("Поддержка", "Попросите провайдера настроить полную маршрутизацию в конфиге")
+        )
+    ),
+    "vpn_works" to LearnContent(
+        title = "VPN не работает",
+        what = "VPN-клиент подключён, но трафик не маршрутизируется через туннель. " +
+                "Это может быть ошибка TLS, проблема с DNS или сбой сервера.",
+        harm = "Весь трафик идёт напрямую — VPN не защищает. IP виден провайдеру.",
+        fixes = listOf(
+            ClientFix("Проверь", "Переподключи VPN — возможно сервер временно недоступен"),
+            ClientFix("Hiddify", "Попробуй другой сервер или протокол"),
+            ClientFix("WireGuard", "Проверь что endpoint доступен"),
+            ClientFix("Поддержка", "Напиши провайдеру — возможно сервер заблокирован ТСПУ")
+        )
+    ),
+    "clash_api" to LearnContent(
+        title = "API конфигурации открыт",
+        what = "Clash/Mihomo REST API открыт на порту 9090 без пароля. " +
+                "Через него доступна полная конфигурация и список всех активных соединений — " +
+                "какие сайты ты открывал через VPN.",
+        harm = "Враждебные приложения видят историю соединений и IP всех серверов.",
+        fixes = listOf(
+            ClientFix("Clash", "Настройки → External Controller → установить secret"),
+            ClientFix("FlClash", "Настройки → API → установить пароль"),
+            ClientFix("sing-box", "config.json → experimental.clash_api.secret"),
+            ClientFix("Поддержка", "Попросите добавить secret в Clash API конфига")
+        )
+    ),
+    "system_proxy" to LearnContent(
+        title = "Системный прокси обнаружен",
+        what = "VPN-клиент установил системный прокси (http.proxyHost). " +
+                "Этот адрес виден любому приложению через System.getProperty() без разрешений.",
+        harm = "Любое приложение узнаёт IP и порт прокси без разрешений.",
+        fixes = listOf(
+            ClientFix("Решение", "Переключи VPN-клиент в TUN-режим — системный прокси не используется"),
+            ClientFix("Hiddify", "Настройки → Режим работы → VPN (TUN)"),
+            ClientFix("v2rayNG", "Настройки → VPN mode → включить")
         )
     )
 )

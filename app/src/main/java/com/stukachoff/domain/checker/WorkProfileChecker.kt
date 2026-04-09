@@ -33,7 +33,7 @@ class WorkProfileChecker @Inject constructor(
             hasIsland = hasIsland,
             check = CheckResult.Fixable(
                 id           = "work_profile",
-                title        = "Work Profile / Изоляция",
+                title        = "Изоляция профилей",
                 status       = if (hasAnyIsolation) CheckStatus.GREEN else CheckStatus.YELLOW,
                 harm         = if (hasAnyIsolation)
                     buildString {

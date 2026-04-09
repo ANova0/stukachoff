@@ -51,7 +51,7 @@ class SplitTunnelCheckerImpl @Inject constructor(
 
         CheckResult.Fixable(
             id           = "split_tunnel",
-            title        = "Маршрутизация (Split-Tunnel)",
+            title        = "Все приложения через VPN",
             status       = when (status) {
                 SplitTunnelStatus.FULL_TUNNEL -> CheckStatus.GREEN
                 SplitTunnelStatus.SPLIT_TUNNEL -> CheckStatus.YELLOW
