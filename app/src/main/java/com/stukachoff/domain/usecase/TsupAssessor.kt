@@ -24,7 +24,6 @@ class TsupAssessor @Inject constructor() {
     ): Pair<ProtectionLevel, String> {
         // WARP обёртка или Relay повышают оценку
         val warpBonus = exitIpAnalysis?.isCloudflare == true
-        val relayBonus = exitIpAnalysis?.isRussian == true
         // Use config data if available (more accurate)
         if (vpnConfig != null && vpnConfig.outbounds.isNotEmpty()) {
             val ob = vpnConfig.outbounds.first()
@@ -43,12 +42,7 @@ class TsupAssessor @Inject constructor() {
         // Fallback: by client + MTU
         if (activeClient == null) return ProtectionLevel.MEDIUM to "Клиент не определён"
 
-        val suffix = when {
-            warpBonus && relayBonus -> " + WARP + Relay РФ"
-            warpBonus               -> " + WARP обёртка (IP скрыт)"
-            relayBonus              -> " + Relay через РФ"
-            else                    -> ""
-        }
+        val suffix = if (warpBonus) " + WARP обёртка (IP скрыт)" else ""
 
         val (baseLevel, baseDesc) = when {
             activeClient.engine == VpnEngine.AMNEZIA ->
@@ -69,7 +63,7 @@ class TsupAssessor @Inject constructor() {
         }
 
         // WARP или Relay повышают оценку на один уровень
-        val boostedLevel = if (warpBonus || relayBonus) {
+        val boostedLevel = if (warpBonus) {
             when (baseLevel) {
                 ProtectionLevel.LOW      -> ProtectionLevel.MEDIUM
                 ProtectionLevel.MEDIUM   -> ProtectionLevel.HIGH

@@ -90,16 +90,30 @@ object ActiveClientDetector {
         }
 
         // Signal 2: MTU → engine
+        // AmneziaVPN использует разные MTU: 1280 (AmneziaWG), 1376 (OpenVPN), 1320 и др.
+        // WireGuard стандартный: 1420
         val engineByMtu: VpnEngine? = when (mtu) {
-            1280 -> VpnEngine.AMNEZIA
-            1420 -> VpnEngine.WIREGUARD
-            else -> null
+            1280 -> VpnEngine.AMNEZIA   // AmneziaWG
+            1376 -> VpnEngine.AMNEZIA   // AmneziaVPN OpenVPN mode
+            1320 -> VpnEngine.AMNEZIA   // AmneziaVPN WG mode
+            1420 -> VpnEngine.WIREGUARD // Standard WireGuard
+            else -> {
+                // Нестандартный MTU (не 1500 и не 1420) + установлена Amnezia → вероятно Amnezia
+                if (mtu != 1500 && mtu != 1420 && mtu < 1500 &&
+                    installedVpnPackages.any { it.startsWith("org.amnezia") }) {
+                    VpnEngine.AMNEZIA
+                } else null
+            }
         }
 
         // Signal 3: Open ports → specific client name
+        // Но только если этот клиент реально установлен
         val clientByPort = openPorts
             .mapNotNull { PORT_TO_CLIENT[it.port] }
-            .firstOrNull()
+            .firstOrNull { portClient ->
+                // Проверяем что клиент реально установлен
+                installedClients.any { it.second == portClient }
+            }
 
         // Signal 4: If only ONE VPN client installed → must be it
         val singleInstalled = if (installedClients.size == 1) installedClients.first() else null

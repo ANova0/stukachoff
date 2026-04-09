@@ -241,7 +241,6 @@ class ScanOrchestrator @Inject constructor(
                     val a = exitIp.ipAnalysis
                     when {
                         a.isCloudflare -> "Доступны · ${exitIp.ip} (Cloudflare WARP — реальный IP скрыт)"
-                        a.isRussian    -> "Доступны · ${exitIp.ip} (Relay через РФ — качественная инфраструктура)"
                         else           -> "Доступны · через ${exitIp.ip}"
                     }
                 }

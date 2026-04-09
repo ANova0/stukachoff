@@ -156,8 +156,18 @@ fun VerifyScreen(
         }
 
         // === 9. Deep Scan ===
-        // Deep Scan button
         if (!isDeepScanning && fullScanPorts.isEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Text(
+                        "Глубокий скан ищет открытые сервисы на всех портах (1-65535). " +
+                        "На каждом найденном порту пробуем gRPC handshake — если ответит, " +
+                        "читаем конфиг VPN.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             item {
                 OutlinedButton(
                     onClick = { viewModel.deepScan() },
@@ -558,6 +568,20 @@ fun InfoRow(label: String, value: String) {
     }
 }
 
+// Краткие описания проверок для глоссария (?)
+private val checkExplanations = mapOf(
+    "vpn_works"    to "Реальная проверка работы VPN — делаем HTTPS-запрос через туннель и смотрим какой IP видит внешний мир.",
+    "grpc_api"     to "gRPC API — служебный порт xray (10085). Если открыт без пароля — любое приложение читает IP сервера, UUID и ключи.",
+    "clash_api"    to "Clash REST API (порт 9090). Без пароля отдаёт полную конфигурацию и список всех посещённых сайтов.",
+    "dns_leak"     to "DNS-утечка — когда запросы «какой IP у google.com?» идут мимо VPN к провайдеру. Провайдер видит все сайты.",
+    "mtu"          to "MTU — максимальный размер пакета. WireGuard=1420, AmneziaWG=1280. По этому числу ТСПУ определяет тип VPN.",
+    "split_tunnel" to "Split-tunnel — часть приложений идёт мимо VPN. VK и Сбер в bypass делают HTTP-пробы и определяют VPN.",
+    "system_proxy" to "Системный прокси — если VPN-клиент работает в режиме прокси, его адрес виден всем приложениям.",
+    "work_profile" to "Изоляция профилей — Knox, Shelter или Island создают отдельный профиль. VPN в изолированном профиле труднее обнаружить.",
+    "android_version" to "Android 10+ закрывает /proc/net/ через SELinux. На старых версиях любое приложение видит все TCP-соединения.",
+    "exit_ip"      to "Exit IP — реальный IP через который твой трафик выходит в интернет. Если VPN работает — это IP VPN-сервера."
+)
+
 @Composable
 fun CheckCard(
     check: CheckResult.Fixable,
@@ -566,6 +590,7 @@ fun CheckCard(
     onRecheck: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(check.status == CheckStatus.RED) }
+    var showExplanation by remember { mutableStateOf(false) }
 
     val statusIcon = when (check.status) {
         CheckStatus.GREEN  -> "🟢"
@@ -592,9 +617,9 @@ fun CheckCard(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        // FIX-7: Кнопка (?) — расшифровка термина через Learn
+        // Кнопка (?) — глоссарий с объяснением термина
         TextButton(
-            onClick = { onLearnMore(check.id) },
+            onClick = { showExplanation = true },
             contentPadding = PaddingValues(2.dp),
             modifier = Modifier.size(28.dp)
         ) {
@@ -645,4 +670,30 @@ fun CheckCard(
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant
     )
+
+    // Глоссарный диалог при нажатии (?)
+    if (showExplanation) {
+        AlertDialog(
+            onDismissRequest = { showExplanation = false },
+            title = { Text(check.title) },
+            text = {
+                Text(
+                    checkExplanations[check.id]
+                        ?: "Описание для этой проверки ещё не добавлено.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                if (check.requiresFix) {
+                    TextButton(onClick = {
+                        showExplanation = false
+                        onLearnMore(check.id)
+                    }) { Text("Как исправить") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExplanation = false }) { Text("Понятно") }
+            }
+        )
+    }
 }
