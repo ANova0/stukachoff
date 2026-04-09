@@ -57,6 +57,11 @@ fun VerifyScreen(
             item { CorporateVpnMessage() }
         }
 
+        // Активный клиент — показываем ЯВНО
+        state.activeClient?.let { client ->
+            item { ActiveClientBanner(client) }
+        }
+
         state.overallVerdict?.let { verdict ->
             item { OverallVerdictCard(verdict = verdict) }
         }
@@ -211,6 +216,37 @@ fun NotActiveMessage(onScan: () -> Unit = {}) {
             shape    = RoundedCornerShape(14.dp)
         ) {
             Text("Сканировать устройство", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+    }
+}
+
+@Composable
+fun ActiveClientBanner(client: com.stukachoff.data.apps.ActiveClient) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("📱", fontSize = 24.sp)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Активный клиент: ${client.displayName}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    buildString {
+                        append("${client.engine.name} · ${client.mode.name}")
+                        if (client.confidence < 80) append(" · точность: ${client.confidence}%")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
