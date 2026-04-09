@@ -56,6 +56,13 @@ fun VerifyScreen(
             item { CorporateVpnMessage() }
         }
 
+        state.overallVerdict?.let { verdict ->
+            item { OverallVerdictCard(verdict = verdict) }
+        }
+        state.vpnConfig?.takeIf { it.outbounds.isNotEmpty() }?.let { config ->
+            item { ConfigRevealCard(config = config) }
+        }
+
         if (state.alwaysVisible.isNotEmpty()) {
             item { AlwaysVisibleSection(state.alwaysVisible, state.deviceInfo) }
         }
