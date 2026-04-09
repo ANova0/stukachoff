@@ -12,13 +12,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
 
 class PortScannerImpl : PortScanner {
 
-    private val connectTimeoutMs = 150
+    companion object {
+        private const val KNOWN_PORT_TIMEOUT_MS = 150
+        private const val FULL_SCAN_TIMEOUT_MS  = 100
+        private const val FULL_SCAN_CONCURRENCY = 200
+    }
+
+    private val connectTimeoutMs = KNOWN_PORT_TIMEOUT_MS
 
     override suspend fun scan(): PortScanResult = withContext(Dispatchers.IO) {
         val allKnownPorts = PortCategorizer.grpcPorts +
@@ -68,13 +76,16 @@ class PortScannerImpl : PortScanner {
         )
     }
 
-    suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
+    override suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
+        val semaphore = Semaphore(FULL_SCAN_CONCURRENCY)
         coroutineScope {
             (1024..65535).map { port ->
                 async {
-                    if (isPortOpen(port, 100)) {
-                        OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
-                    } else null
+                    semaphore.withPermit {
+                        if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))
+                            OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
+                        else null
+                    }
                 }
             }.awaitAll().filterNotNull()
         }

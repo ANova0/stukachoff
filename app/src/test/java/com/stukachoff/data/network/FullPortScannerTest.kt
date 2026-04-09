@@ -12,11 +12,18 @@ class FullPortScannerTest {
     private val scanner = PortScannerImpl()
 
     @Test
-    fun `fullScan returns list (may be empty on test machine)`() = runTest {
-        // fullScan() must run and return a list (empty is ok in unit test environment)
+    fun `fullScan completes without throwing and ports are in valid range`() = runTest {
+        // Verifies fullScan() runs successfully and returns valid data
         val result = scanner.fullScan()
-        assertNotNull(result)
-        assertTrue("fullScan() must return a List", result is List<*>)
+        // Each found port must be in the scanned range
+        result.forEach { openPort ->
+            assertTrue(
+                "Port ${openPort.port} outside scan range",
+                openPort.port in 1024..65535
+            )
+            assertFalse("Description must not be empty", openPort.description.isBlank())
+        }
+        // Passes if no exception thrown (port scanning may return empty on CI)
     }
 
     @Test

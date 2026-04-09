@@ -6,6 +6,7 @@ import com.stukachoff.domain.model.HarmSeverity
 
 interface PortScanner {
     suspend fun scan(): PortScanResult
+    suspend fun fullScan(): List<OpenPort>
 }
 
 data class PortScanResult(
