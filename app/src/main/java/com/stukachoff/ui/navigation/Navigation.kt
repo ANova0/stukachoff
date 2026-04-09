@@ -6,16 +6,22 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.ui.about.AboutScreen
 import com.stukachoff.ui.learn.LearnScreen
 import com.stukachoff.ui.onboarding.OnboardingScreen
 import com.stukachoff.ui.settings.SettingsScreen
 import com.stukachoff.ui.threats.ThreatsScreen
+import com.stukachoff.ui.tutorial.TutorialScreen
 import com.stukachoff.ui.verify.VerifyScreen
+import com.stukachoff.ui.verify.VerifyViewModel
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector? = null) {
     object Verify      : Screen("verify", "Проверка", Icons.Default.Home)
@@ -26,6 +32,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector?
     object Learn       : Screen("learn/{checkId}", "Как исправить") {
         fun route(checkId: String) = "learn/$checkId"
     }
+    object Tutorial    : Screen("tutorial", "Учебник")
 }
 
 val bottomNavItems = listOf(Screen.Verify, Screen.Threats, Screen.Settings)
@@ -58,7 +65,8 @@ fun StukachoffNavHost(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onOpenOnboarding = { navController.navigate(Screen.Onboarding.route) },
-                onOpenAbout      = { navController.navigate(Screen.About.route) }
+                onOpenAbout      = { navController.navigate(Screen.About.route) },
+                onOpenTutorial   = { navController.navigate(Screen.Tutorial.route) }
             )
         }
 
@@ -70,15 +78,28 @@ fun StukachoffNavHost(
             val checkId = backStack.arguments?.getString("checkId") ?: ""
             LearnScreen(checkId = checkId)
         }
+
+        composable(Screen.Tutorial.route) {
+            val verifyVm: VerifyViewModel = hiltViewModel()
+            val state by verifyVm.state.collectAsState()
+            TutorialScreen(
+                activeClient    = state.activeClient,
+                vulnerabilities = state.fixable
+                    .filter { it.status == CheckStatus.RED || it.status == CheckStatus.YELLOW }
+                    .map { it.id },
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }
 
 @Composable
 fun BottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit) {
-    // Не показываем нижнюю панель на онбординге и экране LEARN
+    // Не показываем нижнюю панель на онбординге и экранах LEARN, TUTORIAL, ABOUT
     if (currentRoute == Screen.Onboarding.route ||
         currentRoute?.startsWith("learn/") == true ||
-        currentRoute == Screen.About.route) return
+        currentRoute == Screen.About.route ||
+        currentRoute == Screen.Tutorial.route) return
 
     NavigationBar {
         bottomNavItems.forEach { screen ->

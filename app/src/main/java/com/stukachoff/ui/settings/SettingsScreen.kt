@@ -28,6 +28,7 @@ import com.stukachoff.ui.update.UpdateViewModel
 fun SettingsScreen(
     onOpenOnboarding: () -> Unit,
     onOpenAbout: () -> Unit = {},
+    onOpenTutorial: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     updateViewModel: UpdateViewModel = hiltViewModel()
 ) {
@@ -88,6 +89,13 @@ fun SettingsScreen(
 
         item {
             SettingsSection(title = "Справка") {
+                SettingsItem(
+                    icon    = Icons.Default.PlayArrow,
+                    title   = "Учебник защиты",
+                    subtitle = "Инструкции по настройке VPN-клиента",
+                    onClick = onOpenTutorial
+                )
+                HorizontalDivider()
                 SettingsItem(
                     icon    = Icons.Default.PlayArrow,
                     title   = "Как работает приложение",
