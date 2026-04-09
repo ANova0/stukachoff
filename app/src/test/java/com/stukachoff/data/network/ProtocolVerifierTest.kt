@@ -3,6 +3,7 @@ package com.stukachoff.data.network
 import org.junit.Assert.*
 import org.junit.Test
 import java.net.ServerSocket
+import java.util.concurrent.CountDownLatch
 
 class ProtocolVerifierTest {
 
@@ -25,9 +26,11 @@ class ProtocolVerifierTest {
 
         // verify() calls isPortReachable (connection 1), then trySocks5 (connection 2).
         // We need to handle both connections, responding with SOCKS5 bytes each time.
+        val serverReady = CountDownLatch(1)
         Thread {
             runCatching {
                 server.use { srv ->
+                    serverReady.countDown() // signal server is ready
                     repeat(2) {
                         runCatching {
                             srv.accept().use { client ->
@@ -45,7 +48,7 @@ class ProtocolVerifierTest {
             }
         }.start()
 
-        Thread.sleep(50) // let server start
+        serverReady.await() // wait for server to be listening
         val result = ProtocolVerifier.verify(port)
         assertEquals(DetectedProtocol.SOCKS5, result)
     }
@@ -58,9 +61,11 @@ class ProtocolVerifierTest {
         // verify() calls: isPortReachable (conn 1), trySocks5 (conn 2, gets HTTP response → 0x05 check fails),
         // tryHttpProxy (conn 3, gets HTTP response → startsWith("HTTP/") → true).
         // We need to handle all 3 connections.
+        val serverReady = CountDownLatch(1)
         Thread {
             runCatching {
                 server.use { srv ->
+                    serverReady.countDown() // signal server is ready
                     repeat(3) {
                         runCatching {
                             srv.accept().use { client ->
@@ -77,7 +82,7 @@ class ProtocolVerifierTest {
             }
         }.start()
 
-        Thread.sleep(50)
+        serverReady.await() // wait for server to be listening
         val result = ProtocolVerifier.verify(port)
         assertEquals(DetectedProtocol.HTTP_PROXY, result)
     }
@@ -89,9 +94,11 @@ class ProtocolVerifierTest {
 
         // verify() calls: isPortReachable (conn 1), trySocks5 (conn 2, gets garbage → false),
         // tryHttpProxy (conn 3, gets garbage → false) → UNKNOWN_TCP.
+        val serverReady = CountDownLatch(1)
         Thread {
             runCatching {
                 server.use { srv ->
+                    serverReady.countDown() // signal server is ready
                     repeat(3) {
                         runCatching {
                             srv.accept().use { client ->
@@ -108,7 +115,7 @@ class ProtocolVerifierTest {
             }
         }.start()
 
-        Thread.sleep(50)
+        serverReady.await() // wait for server to be listening
         val result = ProtocolVerifier.verify(port)
         assertEquals(DetectedProtocol.UNKNOWN_TCP, result)
     }

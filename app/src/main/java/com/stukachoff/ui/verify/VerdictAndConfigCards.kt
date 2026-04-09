@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +83,16 @@ private fun VerdictRow(label: String, level: ProtectionLevel, details: String) {
         ProtectionLevel.CRITICAL -> "🚨" to Color(0xFF7B0000)
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, fontSize = 20.sp)
+        Text(emoji, fontSize = 20.sp,
+            modifier = Modifier.semantics {
+                contentDescription = when (level) {
+                    ProtectionLevel.HIGH     -> "Высокая защита"
+                    ProtectionLevel.MEDIUM   -> "Средняя защита"
+                    ProtectionLevel.LOW      -> "Низкая защита"
+                    ProtectionLevel.CRITICAL -> "Критическая уязвимость"
+                }
+            }
+        )
         Spacer(Modifier.width(10.dp))
         Column {
             Text(
@@ -102,7 +113,7 @@ private fun VerdictRow(label: String, level: ProtectionLevel, details: String) {
 
 @Composable
 fun ConfigRevealCard(config: VpnConfig) {
-    var expanded by remember { mutableStateOf(true) }
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -128,7 +139,7 @@ fun ConfigRevealCard(config: VpnConfig) {
                     onClick = { expanded = !expanded },
                     contentPadding = PaddingValues(4.dp)
                 ) {
-                    Text(if (expanded) "↑" else "↓")
+                    Text(if (expanded) "Скрыть ↑" else "Показать что видят стукачи ↓")
                 }
             }
 

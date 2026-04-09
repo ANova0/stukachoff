@@ -41,7 +41,21 @@ class XrayConfigReader @Inject constructor() {
 
             val response = client.newCall(request).execute()
             val bytes = response.body?.bytes()
-            parseOutbounds(bytes)
+            var result = parseOutbounds(bytes)
+
+            // After existing request, if parseOutbounds returns empty, try listing services
+            if (result.isEmpty()) {
+                val listRequest = Request.Builder()
+                    .url("http://127.0.0.1:$port/xray.app.proxyman.command.HandlerService/ListOutbounds")
+                    .post(body)
+                    .header("content-type", "application/grpc")
+                    .header("te", "trailers")
+                    .build()
+                val listResp = client.newCall(listRequest).execute()
+                result = parseOutbounds(listResp.body?.bytes())
+            }
+
+            result
         }.getOrNull()
     }
 
@@ -61,7 +75,10 @@ class XrayConfigReader @Inject constructor() {
         val ips     = ipv4Regex.findAll(text).map { it.value }
             .filter { !it.startsWith("127.") && !it.startsWith("0.") }.toList()
         val domains = domainRegex.findAll(text).map { it.value }
-            .filter { !it.contains("grpc") && !it.contains("xray") }.toList()
+            .filter {
+                !it.contains("grpc") && !it.contains("xray") &&
+                it.length >= 5 && it.contains(".")  // minimum domain length
+            }.toList()
         val keys    = base64Regex.findAll(text).map { it.value }.toList()
 
         if (uuids.isEmpty() && ips.isEmpty()) return emptyList()
@@ -108,9 +125,20 @@ class XrayConfigReader @Inject constructor() {
     }
 
     private fun detectPort(text: String, server: String): Int {
+        // Look for port near the server address
+        if (server != "unknown") {
+            val serverPortRegex = Regex("""${Regex.escape(server)}[:\s]+(\d{2,5})""")
+            serverPortRegex.find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?.takeIf { it in 1..65535 }?.let { return it }
+        }
+        // Fallback: find most common port-like numbers (exclude well-known non-VPN)
         val portRegex = Regex(""":(\d{2,5})\b""")
-        return portRegex.findAll(text).mapNotNull { it.groupValues[1].toIntOrNull() }
-            .filter { it in 1..65535 && it != 80 }.firstOrNull() ?: 443
+        return portRegex.findAll(text)
+            .mapNotNull { it.groupValues[1].toIntOrNull() }
+            .filter { it in 1..65535 && it !in setOf(80, 443, 8080, 8443, 10085, 9090) }
+            .groupBy { it }
+            .maxByOrNull { it.value.size }?.key
+            ?: 443
     }
 
     fun calculateTsup(transport: String, security: String): TsupLevel = when {

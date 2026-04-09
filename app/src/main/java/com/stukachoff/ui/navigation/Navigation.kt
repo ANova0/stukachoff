@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -80,13 +81,20 @@ fun StukachoffNavHost(
         }
 
         composable(Screen.Tutorial.route) {
-            val verifyVm: VerifyViewModel = hiltViewModel()
+            val parentEntry = remember(it) {
+                runCatching { navController.getBackStackEntry(Screen.Verify.route) }.getOrNull()
+            }
+            val verifyVm: VerifyViewModel = if (parentEntry != null) {
+                hiltViewModel(parentEntry)
+            } else {
+                hiltViewModel() // fallback: own VM
+            }
             val state by verifyVm.state.collectAsState()
             TutorialScreen(
                 activeClient    = state.activeClient,
                 vulnerabilities = state.fixable
-                    .filter { it.status == CheckStatus.RED || it.status == CheckStatus.YELLOW }
-                    .map { it.id },
+                    .filter { check -> check.status == CheckStatus.RED || check.status == CheckStatus.YELLOW }
+                    .map { check -> check.id },
                 onBack = { navController.popBackStack() }
             )
         }

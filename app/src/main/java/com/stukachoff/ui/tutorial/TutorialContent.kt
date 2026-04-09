@@ -133,6 +133,24 @@ val TSPU_ADVICE: Map<VpnEngine, TsupAdvice> = mapOf(
             "Включи Junk packets в настройках (Jc=4)"
         )
     ),
+    VpnEngine.TOR to TsupAdvice(
+        problem  = "Tor обеспечивает высокую анонимность но работает медленно",
+        solution = "Tor — максимальная анонимность но низкая скорость",
+        steps    = listOf(
+            "Tor маршрутизирует через 3 узла — это медленнее обычного VPN",
+            "Для повседневного использования рассмотри VLESS+Reality (Hiddify)",
+            "Для максимальной анонимности Tor остаётся лучшим выбором"
+        )
+    ),
+    VpnEngine.CLOUDFLARE to TsupAdvice(
+        problem  = "Cloudflare WARP — не полноценный VPN, трафик видит Cloudflare",
+        solution = "WARP скрывает IP от сайтов но Cloudflare видит весь трафик",
+        steps    = listOf(
+            "WARP не защищает от ТСПУ в полной мере",
+            "Для защиты от блокировок используй VLESS+Reality или AmneziaWG",
+            "WARP полезен как резервный вариант когда другие VPN недоступны"
+        )
+    ),
     VpnEngine.OPENVPN to TsupAdvice(
         problem  = "OpenVPN заблокирован ТСПУ — сигнатура определяется мгновенно",
         solution = "Смени протокол на VLESS+Reality (Hiddify) или AmneziaWG",

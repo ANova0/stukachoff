@@ -23,10 +23,8 @@ class PortScannerImpl : PortScanner {
     companion object {
         private const val KNOWN_PORT_TIMEOUT_MS = 150
         private const val FULL_SCAN_TIMEOUT_MS  = 100
-        private const val FULL_SCAN_CONCURRENCY = 200
+        private const val FULL_SCAN_CONCURRENCY = 100  // Conservative for mobile fd limits
     }
-
-    private val connectTimeoutMs = KNOWN_PORT_TIMEOUT_MS
 
     override suspend fun scan(): PortScanResult = withContext(Dispatchers.IO) {
         val allKnownPorts = PortCategorizer.grpcPorts +
@@ -99,7 +97,7 @@ class PortScannerImpl : PortScanner {
         }
     }
 
-    private fun isPortOpen(port: Int): Boolean = isPortOpen(port, connectTimeoutMs)
+    private fun isPortOpen(port: Int): Boolean = isPortOpen(port, KNOWN_PORT_TIMEOUT_MS)
 
     private fun isPortOpen(port: Int, timeoutMs: Int): Boolean = try {
         Socket().use { socket ->
