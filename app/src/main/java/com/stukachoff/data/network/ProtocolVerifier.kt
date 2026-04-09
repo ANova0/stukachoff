@@ -15,10 +15,15 @@ object ProtocolVerifier {
      * Uses real handshake bytes — identifies but does NOT exploit.
      */
     fun verify(port: Int): DetectedProtocol {
+        if (!isPortReachable(port)) return DetectedProtocol.NOT_OPEN
         if (trySocks5(port)) return DetectedProtocol.SOCKS5
         if (tryHttpProxy(port)) return DetectedProtocol.HTTP_PROXY
         return DetectedProtocol.UNKNOWN_TCP
     }
+
+    private fun isPortReachable(port: Int): Boolean = try {
+        Socket().use { it.connect(InetSocketAddress("127.0.0.1", port), TIMEOUT_MS); true }
+    } catch (_: Exception) { false }
 
     /**
      * SOCKS5 greeting: version=5, nmethods=1, method=0 (no auth)
