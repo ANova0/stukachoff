@@ -2,7 +2,9 @@ package com.stukachoff.ui.threats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.stukachoff.data.apps.AppPermissionRisk
 import com.stukachoff.data.apps.AppThreatAnalyzer
+import com.stukachoff.data.apps.PermissionAnalyzer
 import com.stukachoff.data.content.ContentRepository
 import com.stukachoff.domain.model.AppThreat
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,14 +15,15 @@ import javax.inject.Inject
 
 data class ThreatsState(
     val threats: List<AppThreat> = emptyList(),
+    val permissionRisks: List<AppPermissionRisk> = emptyList(),
     val isLoading: Boolean = true,
-    val noneInstalled: Boolean = false,
-    val dbVersion: String = ""
+    val noneInstalled: Boolean = false
 )
 
 @HiltViewModel
 class ThreatsViewModel @Inject constructor(
     private val analyzer: AppThreatAnalyzer,
+    private val permissionAnalyzer: PermissionAnalyzer,
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
@@ -28,7 +31,6 @@ class ThreatsViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
-        // Обновляем базу в фоне (только при сетевом режиме)
         viewModelScope.launch { contentRepository.refreshInBackground() }
         load()
     }
@@ -37,10 +39,12 @@ class ThreatsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = ThreatsState(isLoading = true)
             val threats = analyzer.analyze()
+            val risks   = permissionAnalyzer.analyzeInstalledApps()
             _state.value = ThreatsState(
-                threats      = threats,
-                isLoading    = false,
-                noneInstalled = threats.isEmpty()
+                threats          = threats,
+                permissionRisks  = risks,
+                isLoading        = false,
+                noneInstalled    = threats.isEmpty()
             )
         }
     }

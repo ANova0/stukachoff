@@ -5,15 +5,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stukachoff.ui.common.GlossaryText
 
 // TODO: загружать из ContentRepository (threats.json) в следующих задачах
+// Имя Telegram-бота для deep link — замени на реальный username
+private const val BOT_USERNAME = "YOUR_BOT_NAME"
+private const val BOT_DEEP_LINK_BASE = "https://t.me/$BOT_USERNAME?start=stukachoff_fix_"
+
 @Composable
 fun LearnScreen(checkId: String) {
     val content = learnContent[checkId]
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -53,6 +61,29 @@ fun LearnScreen(checkId: String) {
                     Spacer(Modifier.height(4.dp))
                     Text(fix.instruction, style = MaterialTheme.typography.bodySmall)
                 }
+            }
+        }
+
+        // Deep link к боту — только если бот настроен
+        if (BOT_USERNAME != "YOUR_BOT_NAME" &&
+            checkId in listOf("grpc_api", "proxy_mode", "dns_leak", "clash_api")) {
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Используете подписку?",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = {
+                    val url = "$BOT_DEEP_LINK_BASE$checkId"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Получить исправленный конфиг через бот →")
             }
         }
     }

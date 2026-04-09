@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.stukachoff.data.apps.AppPermissionRisk
+import com.stukachoff.data.apps.DangerousPermission
 import com.stukachoff.domain.model.AppThreat
 import com.stukachoff.domain.model.DetectionMethod
 import com.stukachoff.domain.model.ThreatLevel
@@ -75,6 +77,17 @@ fun ThreatsScreen(viewModel: ThreatsViewModel = hiltViewModel()) {
                 }
                 items(yellow) { AppThreatCard(it) }
             }
+        }
+
+        // MCC/SIM риски — приложения с опасными разрешениями
+        if (state.permissionRisks.isNotEmpty()) {
+            item {
+                ThreatSectionHeader(
+                    title    = "📱 Опасные разрешения",
+                    subtitle = "Установленные приложения с доступом к SIM и геолокации"
+                )
+            }
+            items(state.permissionRisks) { PermissionRiskCard(it) }
         }
 
         // Операторы всегда внизу
@@ -285,6 +298,48 @@ fun MethodsExplanationCard() {
                     MethodDescription("Порты", "Сканирование 127.0.0.1 — вообще без разрешений")
                     MethodDescription("HTTP пробы", "Запросы к заблокированным сайтам — нужен INTERNET")
                     MethodDescription("SIM оператор", "Код российского оператора в связке с зарубежным IP — нужен READ_PHONE_STATE")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PermissionRiskCard(risk: AppPermissionRisk) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                risk.appName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(8.dp))
+            risk.dangerousPermissions.forEach { perm ->
+                Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                    Surface(
+                        color = Color(0xFFFF9800).copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            perm.label,
+                            color = Color(0xFFFF9800),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        perm.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
