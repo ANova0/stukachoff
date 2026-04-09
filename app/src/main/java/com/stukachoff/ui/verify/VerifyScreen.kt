@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +28,7 @@ fun VerifyScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val showScanning by viewModel.showScanning.collectAsState()
+    val recheckingId by viewModel.recheckingId.collectAsState()
 
     if (showScanning) {
         ScanningScreen()
@@ -57,8 +60,16 @@ fun VerifyScreen(
                 )
             }
             items(state.fixable) { check ->
-                CheckCard(check = check, onLearnMore = onLearnMore)
+                CheckCard(
+                    check        = check,
+                    isRechecking = recheckingId == check.id,
+                    onLearnMore  = onLearnMore,
+                    onRecheck    = { viewModel.recheckSingle(check.id) }
+                )
             }
+
+            // Технические детали — полный дамп
+            item { TechnicalDetailsCard(state) }
         }
 
         item {
@@ -217,7 +228,12 @@ fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-fun CheckCard(check: CheckResult.Fixable, onLearnMore: (String) -> Unit) {
+fun CheckCard(
+    check: CheckResult.Fixable,
+    isRechecking: Boolean = false,
+    onLearnMore: (String) -> Unit,
+    onRecheck: () -> Unit = {}
+) {
     val statusColor = when (check.status) {
         CheckStatus.GREEN  -> Color(0xFF4CAF50)
         CheckStatus.YELLOW -> Color(0xFFFF9800)
@@ -237,7 +253,11 @@ fun CheckCard(check: CheckResult.Fixable, onLearnMore: (String) -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(statusIcon, fontSize = 20.sp)
+                if (isRechecking) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(statusIcon, fontSize = 20.sp)
+                }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     check.title,
@@ -256,6 +276,19 @@ fun CheckCard(check: CheckResult.Fixable, onLearnMore: (String) -> Unit) {
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
+                }
+                // Кнопка повторной проверки
+                IconButton(
+                    onClick = onRecheck,
+                    enabled = !isRechecking,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Проверить снова",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
