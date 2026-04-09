@@ -112,7 +112,11 @@ private fun VerdictRow(label: String, level: ProtectionLevel, details: String) {
 // ─── ConfigRevealCard ─────────────────────────────────────────────────────
 
 @Composable
-fun ConfigRevealCard(config: VpnConfig) {
+fun ConfigRevealCard(
+    config: VpnConfig,
+    accessMethod: com.stukachoff.domain.model.ConfigAccessMethod =
+        com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT
+) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -126,13 +130,30 @@ fun ConfigRevealCard(config: VpnConfig) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🔴", fontSize = 20.sp)
+                Text(
+                    when (accessMethod) {
+                        com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT ->  "🔴"
+                        com.stukachoff.domain.model.ConfigAccessMethod.ACTIVE_PROBE -> "🟡"
+                        else -> "🔴"
+                    }, fontSize = 20.sp
+                )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Конфиг прочитан — это видят стукачи",
+                    when (accessMethod) {
+                        com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT ->
+                            "Конфиг открыт — видит любое приложение"
+                        com.stukachoff.domain.model.ConfigAccessMethod.ACTIVE_PROBE ->
+                            "Конфиг найден через зондаж — стукачи тоже найдут"
+                        com.stukachoff.domain.model.ConfigAccessMethod.CLASH_API ->
+                            "Конфиг через Clash API"
+                        else -> "Конфиг прочитан"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF44336),
+                    color = when (accessMethod) {
+                        com.stukachoff.domain.model.ConfigAccessMethod.ACTIVE_PROBE -> Color(0xFFFF9800)
+                        else -> Color(0xFFF44336)
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(

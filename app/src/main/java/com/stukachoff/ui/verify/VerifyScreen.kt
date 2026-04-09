@@ -66,7 +66,7 @@ fun VerifyScreen(
             item { OverallVerdictCard(verdict = verdict) }
         }
         state.vpnConfig?.takeIf { it.outbounds.isNotEmpty() }?.let { config ->
-            item { ConfigRevealCard(config = config) }
+            item { ConfigRevealCard(config = config, accessMethod = state.configAccessMethod) }
         }
 
         if (state.alwaysVisible.isNotEmpty()) {

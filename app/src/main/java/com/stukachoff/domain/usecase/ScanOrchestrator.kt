@@ -2,6 +2,7 @@ package com.stukachoff.domain.usecase
 
 import com.stukachoff.data.apps.ActiveClientCheckerImpl
 import com.stukachoff.data.apps.AppThreatAnalyzer
+import com.stukachoff.data.config.ActiveGrpcScanner
 import com.stukachoff.data.config.ClashConfigReader
 import com.stukachoff.data.config.XrayConfigReader
 import com.stukachoff.data.network.DeviceInfoCollector
@@ -52,6 +53,7 @@ class ScanOrchestrator @Inject constructor(
     private val tsupAssessor: TsupAssessor,
     private val xrayConfigReader: XrayConfigReader,
     private val clashConfigReader: ClashConfigReader,
+    private val activeGrpcScanner: ActiveGrpcScanner,
     private val prefs: AppPreferences
 ) {
     fun scan(): Flow<ScanState> = flow {
@@ -97,16 +99,12 @@ class ScanOrchestrator @Inject constructor(
                 installedVpnPackages = instPkgs
             )
 
-            // Активное чтение конфига если gRPC порт открыт
-            val vpnConfig = if (ports.grpcApiResult.status == CheckStatus.RED) {
-                val grpcPort = ports.openKnownPorts
-                    .firstOrNull { it.category == PortCategory.XRAY_GRPC }?.port ?: 10085
-                val outbounds = xrayConfigReader.readOutbounds(grpcPort) ?: emptyList()
-                if (outbounds.isNotEmpty()) VpnConfig(ConfigSource.XRAY_GRPC, outbounds) else null
-            } else null
+            // FIX-15: Активное чтение конфига — пробуем gRPC на ВСЕХ найденных портах
+            val grpcScanResult = activeGrpcScanner.scanAllPorts(ports.openKnownPorts)
+            val vpnConfig = grpcScanResult?.config
 
-            // Clash config если API открыт
-            val clashConfig = if (ports.clashApiResult.status == CheckStatus.RED && vpnConfig == null) {
+            // Clash config как fallback если gRPC не нашёлся
+            val clashConfig = if (vpnConfig == null && ports.clashApiResult.status == CheckStatus.RED) {
                 val clashPort = ports.openKnownPorts
                     .firstOrNull { it.category == PortCategory.CLASH_API }?.port ?: 9090
                 clashConfigReader.read(clashPort)?.let { result ->
@@ -119,6 +117,10 @@ class ScanOrchestrator @Inject constructor(
             } else null
 
             val finalVpnConfig = vpnConfig ?: clashConfig
+
+            // Маркировка КАК получили конфиг
+            // grpcScanResult?.isKnownPort == true → "Стандартный порт — любое приложение видит"
+            // grpcScanResult?.isKnownPort == false → "Найден через активное сканирование"
 
             // FIX-3: Объединяем ExitIp + Routing в одну проверку "VPN работает"
             val vpnWorksCheck = buildVpnWorksCheck(exitIp, routing)
@@ -138,16 +140,25 @@ class ScanOrchestrator @Inject constructor(
             val mtu = iface.vpnInterfaces.firstOrNull()?.mtu ?: 1500
             val verdict = tsupAssessor.buildVerdict(fixable, activeClient, finalVpnConfig, mtu)
 
+            // Определяем маркировку КАК получили конфиг
+            val accessMethod = when {
+                grpcScanResult?.isKnownPort == true  -> com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT
+                grpcScanResult?.isKnownPort == false -> com.stukachoff.domain.model.ConfigAccessMethod.ACTIVE_PROBE
+                clashConfig != null                  -> com.stukachoff.domain.model.ConfigAccessMethod.CLASH_API
+                else                                 -> com.stukachoff.domain.model.ConfigAccessMethod.NOT_READ
+            }
+
             emit(ScanState(
-                vpnStatus      = vpnStatus,
-                alwaysVisible  = buildAlwaysVisible(deviceInfo, activeClient,
+                vpnStatus         = vpnStatus,
+                alwaysVisible     = buildAlwaysVisible(deviceInfo, activeClient,
                     iface.vpnInterfaces.firstOrNull()?.name, exitIp),
-                fixable        = fixable,
-                deviceInfo     = deviceInfo,
-                activeClient   = activeClient,
-                vpnConfig      = finalVpnConfig,
-                overallVerdict = verdict,
-                isScanning     = false
+                fixable           = fixable,
+                deviceInfo        = deviceInfo,
+                activeClient      = activeClient,
+                vpnConfig         = finalVpnConfig,
+                configAccessMethod = accessMethod,
+                overallVerdict    = verdict,
+                isScanning        = false
             ))
         }
     }.flowOn(Dispatchers.IO)

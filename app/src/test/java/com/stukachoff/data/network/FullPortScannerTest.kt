@@ -19,7 +19,7 @@ class FullPortScannerTest {
         result.forEach { openPort ->
             assertTrue(
                 "Port ${openPort.port} outside scan range",
-                openPort.port in 1024..65535
+                openPort.port in 1..65535
             )
             assertFalse("Description must not be empty", openPort.description.isBlank())
         }
@@ -27,10 +27,10 @@ class FullPortScannerTest {
     }
 
     @Test
-    fun `fullScan does not include ports outside 1024-65535`() = runTest {
+    fun `fullScan covers range 1-65535`() = runTest {
         val result = scanner.fullScan()
         result.forEach { port ->
-            assertTrue("Port ${port.port} must be in 1024-65535", port.port in 1024..65535)
+            assertTrue("Port ${port.port} must be in 1-65535", port.port in 1..65535)
         }
     }
 

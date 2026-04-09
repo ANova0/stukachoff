@@ -9,6 +9,7 @@ data class ScanState(
     val deviceInfo: DeviceInfo? = null,
     val activeClient: ActiveClient? = null,
     val vpnConfig: VpnConfig? = null,
+    val configAccessMethod: ConfigAccessMethod = ConfigAccessMethod.NOT_READ,
     val overallVerdict: OverallVerdict? = null,
     val isScanning: Boolean = false,
     val error: String? = null
@@ -30,3 +31,10 @@ data class OverallVerdict(
 )
 
 enum class ProtectionLevel { HIGH, MEDIUM, LOW, CRITICAL }
+
+enum class ConfigAccessMethod {
+    NOT_READ,           // gRPC не ответил нигде
+    KNOWN_PORT,         // 🔴 Стандартный порт (10085) — любое приложение видит
+    ACTIVE_PROBE,       // 🟡 Нестандартный порт — найден через сканирование
+    CLASH_API           // Через Clash REST API
+}
