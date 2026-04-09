@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.stukachoff.domain.model.*
+import com.stukachoff.ui.common.GlossaryText
 import android.os.Build
 
 @Composable
@@ -260,10 +261,10 @@ fun CheckCard(check: CheckResult.Fixable, onLearnMore: (String) -> Unit) {
 
             if (check.requiresFix) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    check.harm,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Термины в тексте кликабельны — открывают глоссарий
+                GlossaryText(
+                    text  = check.harm,
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = { onLearnMore(check.id) }) {

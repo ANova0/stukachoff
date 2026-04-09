@@ -11,11 +11,21 @@ import javax.inject.Singleton
 
 @Singleton
 class ContentRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val updater: ThreatsDatabaseUpdater
 ) {
     fun loadKnownApps(): List<KnownAppEntry> {
-        val json = context.assets.open("threats.json")
-            .bufferedReader().use { it.readText() }
+        // Приоритет: свежий кэш → встроенный assets
+        val json = updater.getCachedOrNull()
+            ?: context.assets.open("threats.json").bufferedReader().use { it.readText() }
+        return parseJson(json)
+    }
+
+    suspend fun refreshInBackground() {
+        updater.updateIfNeeded()
+    }
+
+    private fun parseJson(json: String): List<KnownAppEntry> {
         val root = JSONObject(json)
         val arr = root.getJSONArray("known_apps")
         return (0 until arr.length()).map { i ->
@@ -34,17 +44,17 @@ class ContentRepository @Inject constructor(
                 }
             }
             KnownAppEntry(
-                packageName  = obj.getString("package"),
-                name         = obj.getString("name"),
-                threatLevel  = when (obj.getString("threat_level")) {
+                packageName = obj.getString("package"),
+                name        = obj.getString("name"),
+                threatLevel = when (obj.getString("threat_level")) {
                     "red"  -> ThreatLevel.RED
                     "grey" -> ThreatLevel.GREY
                     else   -> ThreatLevel.YELLOW
                 },
-                confirmed    = obj.optBoolean("confirmed", false),
-                methods      = methods,
-                harm         = obj.getString("harm"),
-                source       = obj.optString("source").takeIf { it.isNotBlank() }
+                confirmed   = obj.optBoolean("confirmed", false),
+                methods     = methods,
+                harm        = obj.getString("harm"),
+                source      = obj.optString("source").takeIf { it.isNotBlank() }
             )
         }
     }

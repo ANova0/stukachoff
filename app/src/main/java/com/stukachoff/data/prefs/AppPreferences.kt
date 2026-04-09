@@ -25,8 +25,17 @@ class AppPreferences @Inject constructor(
         get() = prefs.getBoolean(KEY_PRIVACY_MODE, true)
         set(value) = prefs.edit { putBoolean(KEY_PRIVACY_MODE, value) }
 
+    var lastThreatUpdate: Long
+        get() = prefs.getLong(KEY_THREAT_UPDATE, 0L)
+        set(value) = prefs.edit { putLong(KEY_THREAT_UPDATE, value) }
+
+    fun saveLastThreatUpdate(timestamp: Long) {
+        lastThreatUpdate = timestamp
+    }
+
     companion object {
-        private const val KEY_ONBOARDING   = "onboarding_completed"
-        private const val KEY_PRIVACY_MODE = "privacy_mode_enabled"
+        private const val KEY_ONBOARDING    = "onboarding_completed"
+        private const val KEY_PRIVACY_MODE  = "privacy_mode_enabled"
+        private const val KEY_THREAT_UPDATE = "threats_last_update"
     }
 }

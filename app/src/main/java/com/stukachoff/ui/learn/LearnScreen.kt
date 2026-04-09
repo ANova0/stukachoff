@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stukachoff.ui.common.GlossaryText
 
 // TODO: загружать из ContentRepository (threats.json) в следующих задачах
 @Composable
@@ -28,7 +29,7 @@ fun LearnScreen(checkId: String) {
         Text(content.title, style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        Text(content.what, style = MaterialTheme.typography.bodyLarge)
+        GlossaryText(content.what, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(16.dp))
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -121,6 +122,31 @@ val learnContent = mapOf(
         fixes = listOf(
             ClientFix("Решение", "Обновить Android до версии 10 или выше. " +
                     "Если устройство не поддерживает обновление — рассмотреть замену.")
+        )
+    ),
+    "work_profile" to LearnContent(
+        title = "Work Profile и изоляция",
+        what  = "Work Profile (рабочий профиль) позволяет держать приложения " +
+                "в изолированной песочнице. VPN-клиент в отдельном профиле " +
+                "сложнее обнаружить враждебным приложениям в основном профиле.",
+        harm  = "Без изоляции — VK, Сбер и другие приложения находятся " +
+                "в одном профиле с VPN-клиентом и видят его напрямую.",
+        fixes = listOf(
+            ClientFix("Shelter (F-Droid)", "Установи Shelter, перенеси VPN-клиент в рабочий профиль"),
+            ClientFix("Island (Google Play)", "Аналог Shelter — клонирует приложения в изолированный профиль"),
+            ClientFix("Samsung Knox", "На Samsung устройствах — используй Secure Folder для VPN-клиента")
+        )
+    ),
+    "exit_ip" to LearnContent(
+        title = "Exit IP через туннель",
+        what  = "Проверяет реальный IP-адрес который видят внешние серверы " +
+                "когда трафик идёт через VPN. Запрос уходит через туннель — " +
+                "ТСПУ видит только зашифрованный трафик.",
+        harm  = "Если запрос не прошёл через туннель — VPN не перехватывает " +
+                "трафик приложения. Включи сетевой режим в настройках для проверки.",
+        fixes = listOf(
+            ClientFix("Проверка", "Включи Сетевой режим в Меню → Настройки"),
+            ClientFix("Если красный", "VPN-клиент не перехватывает трафик — проверь режим TUN")
         )
     ),
     "mtu" to LearnContent(
