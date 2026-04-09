@@ -71,7 +71,6 @@
         <package android:name="com.kinopoisk.app" />
         <package android:name="ru.gosuslugi" />
         <package android:name="ru.gosuslugi.mob" />
-        <package android:name="ru.rostel" />
         <package android:name="com.mts.mtsbankonline" />
     </queries>
 

@@ -121,14 +121,6 @@
       "confirmed": false,
       "methods": ["transport_vpn"],
       "harm": "Государственный сервис с доступом к персональным данным"
-    },
-    {
-      "package": "ru.rostel",
-      "name": "Ростелеком",
-      "threat_level": "yellow",
-      "confirmed": false,
-      "methods": ["transport_vpn", "plmn"],
-      "harm": "Оператор связи с доступом к данным соединений"
     }
   ],
   "permission_risks": {

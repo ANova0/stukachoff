@@ -47,6 +47,15 @@ class AppThreatAnalyzer @Inject constructor(
         }
     }
 
+    /** Возвращает package names установленных VPN-клиентов (для ActiveClientDetector) */
+    suspend fun installedVpnPackages(): List<String> = withContext(Dispatchers.IO) {
+        val pm = context.packageManager
+        ALL_VPN_PACKAGES.mapNotNull { (pkg, _) ->
+            try { pm.getPackageInfo(pkg, 0); pkg }
+            catch (_: PackageManager.NameNotFoundException) { null }
+        }
+    }
+
     companion object {
         // Полный список VPN-клиентов — объединение всех трёх референсов
         // + верифицировано через adb на реальном устройстве

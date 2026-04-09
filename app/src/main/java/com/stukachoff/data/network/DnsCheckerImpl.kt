@@ -2,6 +2,7 @@ package com.stukachoff.data.network
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import com.stukachoff.domain.checker.DnsChecker
 import com.stukachoff.domain.model.CheckResult
 import com.stukachoff.domain.model.CheckStatus
@@ -15,68 +16,77 @@ class DnsCheckerImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : DnsChecker {
 
-    fun classifyDns(ip: String): CheckStatus = when {
-        ip.startsWith("10.")      -> CheckStatus.GREEN  // VPN туннель (RFC 1918)
-        ip.startsWith("172.1")    -> CheckStatus.GREEN  // VPN туннель 172.16-31.x
-        ip.startsWith("172.2")    -> CheckStatus.GREEN
-        ip.startsWith("172.3")    -> CheckStatus.GREEN
-        ip.startsWith("192.168.") -> CheckStatus.YELLOW // Локальная сеть — возможна утечка
-        ip.startsWith("127.")     -> CheckStatus.GREEN  // Localhost / FakeIP DNS
-        ip.startsWith("::1")      -> CheckStatus.GREEN  // IPv6 Localhost
-        ip.startsWith("fd")       -> CheckStatus.GREEN  // IPv6 ULA — VPN туннель
-        ip.startsWith("fc")       -> CheckStatus.GREEN  // IPv6 ULA
-        ip.isEmpty()              -> CheckStatus.GREEN  // Не определён — не утечка
-        else                      -> CheckStatus.RED    // Внешний DNS — утечка
-    }
-
     override suspend fun check(): CheckResult.Fixable = withContext(Dispatchers.IO) {
-        val dnsServers = getDnsServersViaLinkProperties()
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+            ?: return@withContext greenResult("Нет доступа к сетевой информации")
 
-        // Если DNS-серверы не определены — не можем утверждать что есть утечка
+        val activeNetwork = cm.activeNetwork
+            ?: return@withContext greenResult("Сеть не определена")
+
+        val caps = cm.getNetworkCapabilities(activeNetwork)
+        val isVpnNetwork = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        val linkProps = cm.getLinkProperties(activeNetwork)
+            ?: return@withContext greenResult("DNS-серверы не определены")
+
+        val dnsServers = linkProps.dnsServers
+            .mapNotNull { it.hostAddress }
+            .filter { it.isNotBlank() }
+
         if (dnsServers.isEmpty()) {
+            return@withContext greenResult("DNS через FakeIP/TUN (серверы не раскрыты)")
+        }
+
+        // КЛЮЧЕВАЯ ЛОГИКА:
+        // Если activeNetwork = VPN-сеть → DNS серверы настроены ВНУТРИ туннеля
+        // 1.1.1.1 через VPN-туннель = НОРМАЛЬНО, не утечка
+        // Утечка = DNS идёт к провайдерскому DNS МИМО туннеля
+        if (isVpnNetwork) {
+            // DNS получены от VPN-сети → они идут через туннель → GREEN
             return@withContext CheckResult.Fixable(
                 id           = "dns_leak",
                 title        = "DNS-утечка",
                 status       = CheckStatus.GREEN,
-                harm         = "DNS-серверы не определены (TUN/FakeIP режим — вероятно защищён)",
+                harm         = "DNS через VPN-туннель: ${dnsServers.joinToString(", ")}",
                 harmSeverity = HarmSeverity.INFO
             )
         }
 
-        val leakingServers = dnsServers.filter { classifyDns(it) == CheckStatus.RED }
-        val warningServers = dnsServers.filter { classifyDns(it) == CheckStatus.YELLOW }
+        // activeNetwork НЕ VPN — проверяем есть ли VPN-сеть вообще
+        val hasVpnNetwork = cm.allNetworks.any { network ->
+            cm.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        }
 
-        CheckResult.Fixable(
-            id           = "dns_leak",
-            title        = "DNS-утечка",
-            status       = when {
-                leakingServers.isNotEmpty() -> CheckStatus.RED
-                warningServers.isNotEmpty() -> CheckStatus.YELLOW
-                else                        -> CheckStatus.GREEN
-            },
-            harm         = when {
-                leakingServers.isNotEmpty() ->
-                    "Утечка: DNS-запросы идут через ${leakingServers.joinToString(", ")} — провайдер видит посещаемые сайты"
-                warningServers.isNotEmpty() ->
-                    "Локальный DNS ${warningServers.joinToString(", ")} — возможна частичная утечка"
-                else ->
-                    "DNS через туннель: ${dnsServers.joinToString(", ")}"
-            },
-            harmSeverity = if (leakingServers.isNotEmpty()) HarmSeverity.HIGH else HarmSeverity.MEDIUM
-        )
+        if (hasVpnNetwork) {
+            // VPN есть, но DNS идёт НЕ через VPN-сеть → утечка
+            return@withContext CheckResult.Fixable(
+                id           = "dns_leak",
+                title        = "DNS-утечка",
+                status       = CheckStatus.RED,
+                harm         = "DNS-запросы идут мимо VPN: ${dnsServers.joinToString(", ")} — провайдер видит посещаемые сайты",
+                harmSeverity = HarmSeverity.HIGH
+            )
+        }
+
+        // Нет VPN — не можем оценить
+        greenResult("VPN не активен — проверка невозможна")
     }
 
-    /**
-     * Правильный способ получения DNS на Android — через LinkProperties.
-     * System.getProperty("net.dns1") ненадёжен на современных Android.
-     */
-    private fun getDnsServersViaLinkProperties(): List<String> {
-        val cm = context.getSystemService(ConnectivityManager::class.java)
-        val activeNetwork = cm.activeNetwork ?: return emptyList()
-        val linkProps = cm.getLinkProperties(activeNetwork) ?: return emptyList()
-
-        return linkProps.dnsServers
-            .mapNotNull { it.hostAddress }
-            .filter { it.isNotBlank() }
+    // Оставляем для обратной совместимости с тестами
+    fun classifyDns(ip: String): CheckStatus = when {
+        ip.startsWith("10.")      -> CheckStatus.GREEN
+        ip.startsWith("172.")     -> CheckStatus.GREEN
+        ip.startsWith("192.168.") -> CheckStatus.YELLOW
+        ip.startsWith("127.")     -> CheckStatus.GREEN
+        ip.startsWith("::1")      -> CheckStatus.GREEN
+        ip.startsWith("fd")       -> CheckStatus.GREEN
+        ip.startsWith("fc")       -> CheckStatus.GREEN
+        ip.isEmpty()              -> CheckStatus.GREEN
+        else                      -> CheckStatus.RED
     }
+
+    private fun greenResult(msg: String) = CheckResult.Fixable(
+        id = "dns_leak", title = "DNS-утечка",
+        status = CheckStatus.GREEN, harm = msg, harmSeverity = HarmSeverity.INFO
+    )
 }

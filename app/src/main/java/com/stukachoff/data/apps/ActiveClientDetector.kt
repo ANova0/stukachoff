@@ -1,6 +1,7 @@
 package com.stukachoff.data.apps
 
 import android.content.Context
+import android.content.pm.PackageManager
 import com.stukachoff.domain.checker.OpenPort
 import com.stukachoff.domain.checker.PortCategory
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,8 +18,9 @@ data class ActiveClient(
     val displayName: String,
     val engine: VpnEngine,
     val mode: VpnMode,
-    val confidence: Int,          // 0-100
-    val tsupResistanceBase: com.stukachoff.domain.model.TsupLevel
+    val confidence: Int,
+    val tsupResistanceBase: com.stukachoff.domain.model.TsupLevel,
+    val allInstalled: List<String> = emptyList()  // все установленные VPN-клиенты
 )
 
 object ActiveClientDetector {
@@ -51,33 +53,58 @@ object ActiveClientDetector {
         "com.protonvpn.android"                to (VpnEngine.OTHER      to "Proton VPN"),
     )
 
+    // Порты которые однозначно привязаны к конкретному клиенту
+    private val PORT_TO_CLIENT = mapOf(
+        2334  to "Hiddify",         // Hiddify SOCKS5
+        2333  to "Hiddify",         // Hiddify HTTP
+        10808 to "v2rayNG",         // v2rayNG SOCKS5
+        10809 to "v2rayNG",         // v2rayNG HTTP
+        7891  to "Clash",           // Clash SOCKS5
+        7890  to "Clash",           // Clash HTTP
+    )
+
+    /**
+     * Определяет активный VPN-клиент по 3 сигналам БЕЗ process signal
+     * (getRunningAppProcesses мёртв на Android 13+).
+     *
+     * Сигналы:
+     * 1. Если ОДИН VPN-клиент установлен → 100% это он
+     * 2. Interface name + MTU (wg0 → WireGuard, MTU 1280 → AmneziaWG)
+     * 3. Open ports (2334 → Hiddify, 10808 → v2rayNG)
+     */
     fun classify(
         interfaceName: String,
         mtu: Int,
-        runningPackages: Set<String>,
+        installedVpnPackages: List<String>,
         openPorts: List<OpenPort>
     ): ActiveClient {
-        // Signal 1: interface name → engine
+        val installedClients = installedVpnPackages.mapNotNull { PACKAGE_ENGINE[it] }
+
+        // Signal 1: Interface → engine (wg0 → WG, awg → Amnezia)
         val engineByIface: VpnEngine? = when {
             interfaceName.startsWith("awg", ignoreCase = true) -> VpnEngine.AMNEZIA
             interfaceName.startsWith("wg",  ignoreCase = true) -> VpnEngine.WIREGUARD
             interfaceName.startsWith("ppp", ignoreCase = true) -> VpnEngine.OPENVPN
             interfaceName.startsWith("tap", ignoreCase = true) -> VpnEngine.OPENVPN
-            else -> null // tun0 is ambiguous
+            else -> null
         }
 
         // Signal 2: MTU → engine
         val engineByMtu: VpnEngine? = when (mtu) {
-            1280 -> VpnEngine.AMNEZIA   // AmneziaWG characteristic MTU
-            1420 -> VpnEngine.WIREGUARD // Standard WireGuard MTU
+            1280 -> VpnEngine.AMNEZIA
+            1420 -> VpnEngine.WIREGUARD
             else -> null
         }
 
-        // Signal 3: running process → package/engine
-        val runningPkg = PACKAGE_ENGINE.keys.firstOrNull { it in runningPackages }
-        val (pkgEngine, pkgName) = runningPkg?.let { PACKAGE_ENGINE[it]!! } ?: (null to null)
+        // Signal 3: Open ports → specific client name
+        val clientByPort = openPorts
+            .mapNotNull { PORT_TO_CLIENT[it.port] }
+            .firstOrNull()
 
-        // Detect mode from open ports
+        // Signal 4: If only ONE VPN client installed → must be it
+        val singleInstalled = if (installedClients.size == 1) installedClients.first() else null
+
+        // Determine mode
         val mode: VpnMode = when {
             openPorts.any { it.category == PortCategory.SOCKS5 }    -> VpnMode.SOCKS5
             openPorts.any { it.category == PortCategory.HTTP_PROXY } -> VpnMode.HTTP
@@ -86,56 +113,92 @@ object ActiveClientDetector {
             else -> VpnMode.UNKNOWN
         }
 
-        val finalEngine = pkgEngine ?: engineByIface ?: engineByMtu ?: VpnEngine.OTHER
-        val confidence = when {
-            runningPkg != null && (engineByIface == finalEngine || engineByMtu == finalEngine) -> 98
-            runningPkg != null                                                                  -> 90
-            engineByIface != null && engineByMtu == engineByIface                              -> 85
-            engineByIface != null || engineByMtu != null                                       -> 75
-            else                                                                               -> 50
-        }
-
-        val name = pkgName ?: when (finalEngine) {
-            VpnEngine.AMNEZIA   -> "AmneziaWG"
-            VpnEngine.WIREGUARD -> "WireGuard"
-            VpnEngine.OPENVPN   -> "OpenVPN"
-            else -> "VPN"
+        // Priority: singleInstalled > clientByPort > engineByIface > engineByMtu
+        val (finalName, finalEngine, confidence) = when {
+            // Один установлен → точно он
+            singleInstalled != null -> Triple(
+                singleInstalled.second, singleInstalled.first, 95
+            )
+            // Порт уникально идентифицирует клиент
+            clientByPort != null -> {
+                val entry = PACKAGE_ENGINE.values.find { it.second == clientByPort }
+                Triple(clientByPort, entry?.first ?: VpnEngine.XRAY, 90)
+            }
+            // Interface определяет engine, ищем клиента этого engine
+            engineByIface != null -> {
+                val clientsOfEngine = installedClients.filter { it.first == engineByIface }
+                val name = if (clientsOfEngine.size == 1) clientsOfEngine.first().second
+                           else clientsOfEngine.joinToString(" / ") { it.second }.ifBlank {
+                               engineByIface.name
+                           }
+                val conf = when {
+                    clientsOfEngine.size == 1          -> 85
+                    engineByMtu == engineByIface       -> 85  // interface + MTU agree
+                    else                               -> 60
+                }
+                Triple(name, engineByIface, conf)
+            }
+            // MTU определяет engine
+            engineByMtu != null -> {
+                val clientsOfEngine = installedClients.filter { it.first == engineByMtu }
+                val name = if (clientsOfEngine.size == 1) clientsOfEngine.first().second
+                           else engineByMtu.name
+                Triple(name, engineByMtu, 75)
+            }
+            // Несколько xray-клиентов, tun0, нет портов → перечисляем
+            else -> {
+                val xrayClients = installedClients.filter {
+                    it.first == VpnEngine.XRAY || it.first == VpnEngine.SINGBOX
+                }
+                if (xrayClients.isNotEmpty()) {
+                    val name = xrayClients.joinToString(" / ") { it.second }
+                    Triple(name, VpnEngine.XRAY, 50)
+                } else {
+                    val all = installedClients.joinToString(" / ") { it.second }
+                    Triple(all.ifBlank { "VPN" }, VpnEngine.OTHER, 30)
+                }
+            }
         }
 
         return ActiveClient(
-            packageName        = runningPkg ?: "",
-            displayName        = name,
+            packageName        = "",
+            displayName        = finalName,
             engine             = finalEngine,
             mode               = mode,
             confidence         = confidence,
-            tsupResistanceBase = baseTsup(finalEngine, mtu)
+            tsupResistanceBase = baseTsup(finalEngine, mtu),
+            allInstalled       = installedClients.map { it.second }
         )
     }
 
-    private fun baseTsup(engine: VpnEngine, mtu: Int): com.stukachoff.domain.model.TsupLevel {
-        return when {
-            engine == VpnEngine.AMNEZIA                              -> com.stukachoff.domain.model.TsupLevel.HIGH
-            engine == VpnEngine.TOR                                  -> com.stukachoff.domain.model.TsupLevel.HIGH
-            engine == VpnEngine.XRAY || engine == VpnEngine.SINGBOX  -> com.stukachoff.domain.model.TsupLevel.MEDIUM
-            engine == VpnEngine.WIREGUARD && mtu == 1420             -> com.stukachoff.domain.model.TsupLevel.LOW
-            engine == VpnEngine.OPENVPN                              -> com.stukachoff.domain.model.TsupLevel.BLOCKED
-            engine == VpnEngine.CLOUDFLARE                           -> com.stukachoff.domain.model.TsupLevel.MEDIUM
-            else                                                     -> com.stukachoff.domain.model.TsupLevel.MEDIUM
-        }
+    private fun baseTsup(engine: VpnEngine, mtu: Int): com.stukachoff.domain.model.TsupLevel = when {
+        engine == VpnEngine.AMNEZIA                              -> com.stukachoff.domain.model.TsupLevel.HIGH
+        engine == VpnEngine.TOR                                  -> com.stukachoff.domain.model.TsupLevel.HIGH
+        engine == VpnEngine.XRAY || engine == VpnEngine.SINGBOX  -> com.stukachoff.domain.model.TsupLevel.MEDIUM
+        engine == VpnEngine.WIREGUARD && mtu == 1420             -> com.stukachoff.domain.model.TsupLevel.LOW
+        engine == VpnEngine.OPENVPN                              -> com.stukachoff.domain.model.TsupLevel.BLOCKED
+        engine == VpnEngine.CLOUDFLARE                           -> com.stukachoff.domain.model.TsupLevel.MEDIUM
+        else                                                     -> com.stukachoff.domain.model.TsupLevel.MEDIUM
     }
 }
 
 @Singleton
 class ActiveClientCheckerImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val processChecker: ProcessChecker
+    @ApplicationContext private val context: Context
 ) {
+    /**
+     * Определяет активный VPN-клиент.
+     * НЕ использует getRunningAppProcesses (мёртв на Android 13+).
+     * Вместо этого: installed packages + interface + MTU + ports.
+     */
     suspend fun detect(
         primaryInterface: String?,
         mtu: Int,
-        openPorts: List<OpenPort>
+        openPorts: List<OpenPort>,
+        installedVpnPackages: List<String>
     ): ActiveClient = withContext(Dispatchers.IO) {
-        val running = processChecker.getRunningPackages()
-        ActiveClientDetector.classify(primaryInterface ?: "tun0", mtu, running, openPorts)
+        ActiveClientDetector.classify(
+            primaryInterface ?: "tun0", mtu, installedVpnPackages, openPorts
+        )
     }
 }
