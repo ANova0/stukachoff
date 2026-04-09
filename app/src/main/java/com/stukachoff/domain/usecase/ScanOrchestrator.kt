@@ -1,6 +1,9 @@
 package com.stukachoff.domain.usecase
 
+import com.stukachoff.data.apps.ActiveClientCheckerImpl
 import com.stukachoff.data.apps.AppThreatAnalyzer
+import com.stukachoff.data.config.ClashConfigReader
+import com.stukachoff.data.config.XrayConfigReader
 import com.stukachoff.data.network.DeviceInfoCollector
 import com.stukachoff.data.network.ExitIpCheckResult
 import com.stukachoff.data.network.ExitIpChecker
@@ -9,13 +12,18 @@ import com.stukachoff.data.prefs.AppPreferences
 import com.stukachoff.domain.checker.AndroidVersionChecker
 import com.stukachoff.domain.checker.DnsChecker
 import com.stukachoff.domain.checker.InterfaceChecker
+import com.stukachoff.domain.checker.PortCategory
 import com.stukachoff.domain.checker.PortScanner
 import com.stukachoff.domain.checker.RoutingChecker
+import com.stukachoff.domain.checker.SplitTunnelCheckerImpl
 import com.stukachoff.domain.checker.VpnStatusChecker
 import com.stukachoff.domain.checker.WorkProfileChecker
 import com.stukachoff.domain.model.CheckResult
+import com.stukachoff.domain.model.CheckStatus
+import com.stukachoff.domain.model.ConfigSource
 import com.stukachoff.domain.model.DeviceInfo
 import com.stukachoff.domain.model.ScanState
+import com.stukachoff.domain.model.VpnConfig
 import com.stukachoff.domain.model.VpnStatus
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -36,6 +44,11 @@ class ScanOrchestrator @Inject constructor(
     private val exitIpChecker: ExitIpChecker,
     private val routingChecker: RoutingChecker,
     private val workProfileChecker: WorkProfileChecker,
+    private val splitTunnelChecker: SplitTunnelCheckerImpl,
+    private val activeClientChecker: ActiveClientCheckerImpl,
+    private val tsupAssessor: TsupAssessor,
+    private val xrayConfigReader: XrayConfigReader,
+    private val clashConfigReader: ClashConfigReader,
     private val prefs: AppPreferences
 ) {
     fun scan(): Flow<ScanState> = flow {
@@ -50,25 +63,42 @@ class ScanOrchestrator @Inject constructor(
         emit(ScanState(vpnStatus = vpnStatus, isScanning = true))
 
         coroutineScope {
-            val portResult     = async { portScanner.scan() }
-            val ifaceResult    = async { interfaceChecker.check() }
-            val dnsResult      = async { dnsChecker.check() }
-            val vpnClients     = async { appThreatAnalyzer.installedVpnClients() }
+            val portResult       = async { portScanner.scan() }
+            val ifaceResult      = async { interfaceChecker.check() }
+            val dnsResult        = async { dnsChecker.check() }
+            val vpnClients       = async { appThreatAnalyzer.installedVpnClients() }
             // ExitIpChecker запускается ВСЕГДА — это основной тест работы VPN
-            val exitIpResult   = async { exitIpChecker.check() }
-            val routingResult  = async { routingChecker.check() }
-            val workProfile    = async { workProfileChecker.check() }
+            val exitIpResult     = async { exitIpChecker.check() }
+            val splitTunnelDeferred = async { splitTunnelChecker.check() }
+            val routingResult    = async { routingChecker.check() }
+            val workProfile      = async { workProfileChecker.check() }
 
             val ports      = portResult.await()
             val iface      = ifaceResult.await()
             val dns        = dnsResult.await()
             val clients    = vpnClients.await()
             val exitIp     = exitIpResult.await()
+            val splitTunnel = splitTunnelDeferred.await()
             val routing    = routingResult.await()
             val workResult = workProfile.await()
 
-            val deviceInfo    = deviceInfoCollector.collect(clients)
-            val exitIpCheck   = exitIpChecker.toCheckResult(exitIp)
+            val deviceInfo  = deviceInfoCollector.collect(clients)
+            val exitIpCheck = exitIpChecker.toCheckResult(exitIp)
+
+            // Detect active client after ports and interfaces are resolved
+            val activeClient = activeClientChecker.detect(
+                primaryInterface = iface.vpnInterfaces.firstOrNull()?.name,
+                mtu = iface.vpnInterfaces.firstOrNull()?.mtu ?: 1500,
+                openPorts = ports.openKnownPorts
+            )
+
+            // Read config if gRPC port is open (RED = port is exposed)
+            val vpnConfig = if (ports.grpcApiResult.status == CheckStatus.RED) {
+                val grpcPort = ports.openKnownPorts
+                    .firstOrNull { it.category == PortCategory.XRAY_GRPC }?.port ?: 10085
+                val outbounds = xrayConfigReader.readOutbounds(grpcPort) ?: emptyList()
+                if (outbounds.isNotEmpty()) VpnConfig(ConfigSource.XRAY_GRPC, outbounds) else null
+            } else null
 
             val fixable = buildList {
                 // Критические проверки работы VPN — в приоритете
@@ -81,7 +111,15 @@ class ScanOrchestrator @Inject constructor(
                 add(iface.mtuResult)
                 add(SystemProxyAnalyzer.check())
                 add(workResult.check)
+                add(splitTunnel)
             }.sortedByDescending { it.harmSeverity.ordinal }
+
+            val verdict = tsupAssessor.buildVerdict(
+                fixable = fixable,
+                activeClient = activeClient,
+                vpnConfig = vpnConfig,
+                mtu = iface.vpnInterfaces.firstOrNull()?.mtu ?: 1500
+            )
 
             emit(ScanState(
                 vpnStatus     = vpnStatus,
@@ -89,6 +127,9 @@ class ScanOrchestrator @Inject constructor(
                     iface.vpnInterfaces.firstOrNull()?.name, exitIp),
                 fixable       = fixable,
                 deviceInfo    = deviceInfo,
+                activeClient  = activeClient,
+                vpnConfig     = vpnConfig,
+                overallVerdict = verdict,
                 isScanning    = false
             ))
         }
