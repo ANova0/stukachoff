@@ -1,6 +1,8 @@
 package com.stukachoff.ui.threats
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -123,48 +125,57 @@ fun SectionHeader(title: String, subtitle: String) {
 
 @Composable
 fun ThreatListItem(threat: AppThreat, runningPackages: Set<String>) {
-    val isRunning = threat.packageName in runningPackages
+    val isRunning   = threat.packageName in runningPackages
     val statusColor = if (isRunning) Color(0xFFF44336) else Color(0xFFFF9800)
     val statusText  = if (isRunning) "активен" else "опасен"
     val statusEmoji = if (isRunning) "🔴" else "🟡"
+    var expanded by remember { mutableStateOf(false) }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { expanded = !expanded }
     ) {
-        // Флаг статуса
-        Surface(
-            color = statusColor.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(6.dp),
-            modifier = Modifier.width(80.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "$statusEmoji $statusText",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = statusColor,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-            )
+            Surface(
+                color = statusColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(
+                    "$statusEmoji $statusText",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = statusColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(threat.appName, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(if (expanded) "↑" else "↓",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Spacer(Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(threat.appName, style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium)
-            Text(threat.harm, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1)
+        AnimatedVisibility(visible = expanded) {
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                Text(threat.harm, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                threat.source?.let {
+                    Text("Источник: $it", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant
-    )
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+        thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable
@@ -175,19 +186,7 @@ fun PermissionRiskRow(risk: AppPermissionRisk) {
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            color = Color(0xFFFF9800).copy(alpha = 0.15f),
-            shape = RoundedCornerShape(6.dp),
-            modifier = Modifier.width(80.dp)
-        ) {
-            Text(
-                "⚠️ разрешения",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFFFF9800),
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-            )
-        }
+        Text("⚠️", fontSize = 20.sp, modifier = Modifier.width(36.dp))
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(risk.appName, style = MaterialTheme.typography.bodyMedium,

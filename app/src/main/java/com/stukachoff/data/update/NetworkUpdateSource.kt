@@ -37,9 +37,10 @@ class NetworkUpdateSourceImpl @Inject constructor(
                     .build()
 
                 val response = client.newCall(request).execute()
-                if (!response.isSuccessful) return@runCatching UpdateCheckResult.Error(
-                    "GitHub API: ${response.code}"
-                )
+                if (!response.isSuccessful) return@runCatching when (response.code) {
+                    404 -> UpdateCheckResult.UpToDate // релизов ещё нет
+                    else -> UpdateCheckResult.Error("GitHub API: ${response.code}")
+                }
 
                 val body = response.body?.string()
                     ?: return@runCatching UpdateCheckResult.Error("Пустой ответ")

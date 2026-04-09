@@ -12,7 +12,9 @@ import com.stukachoff.domain.checker.PortScanner
 import com.stukachoff.domain.checker.VpnStatusChecker
 import com.stukachoff.domain.checker.WorkProfileChecker
 import com.stukachoff.domain.model.CheckResult
+import com.stukachoff.domain.model.CheckStatus
 import com.stukachoff.domain.model.DeviceInfo
+import com.stukachoff.domain.model.HarmSeverity
 import com.stukachoff.domain.model.ScanState
 import com.stukachoff.domain.model.VpnStatus
 import kotlinx.coroutines.async
@@ -51,22 +53,24 @@ class ScanOrchestrator @Inject constructor(
             val ifaceResult  = async { interfaceChecker.check() }
             val dnsResult    = async { dnsChecker.check() }
             val vpnClients   = async { appThreatAnalyzer.installedVpnClients() }
-            // Exit IP — только если сетевой режим включён
-            val exitIpResult     = async { exitIpChecker.check() }
-            val workProfile      = async { workProfileChecker.check() }
+            val exitIpResult = async { exitIpChecker.check() }
+            val workProfile  = async { workProfileChecker.check() }
 
-            val ports   = portResult.await()
-            val iface   = ifaceResult.await()
-            val dns     = dnsResult.await()
-            val clients = vpnClients.await()
-            val exitIp      = exitIpResult.await()
-            val workResult  = workProfile.await()
+            val ports      = portResult.await()
+            val iface      = ifaceResult.await()
+            val dns        = dnsResult.await()
+            val clients    = vpnClients.await()
+            val exitIp     = exitIpResult.await()
+            val workResult = workProfile.await()
 
             val deviceInfo = deviceInfoCollector.collect(clients)
 
+            // ExitIp результат — для AlwaysVisible секции (реальная проверка работы VPN)
+            val exitIpWorking = exitIp.status == CheckStatus.GREEN
+            val exitIpText    = exitIp.harm // содержит IP или сообщение об ошибке
+
             val fixable = buildList {
                 add(androidVersionChecker.check())
-                // proxy_mode убран по решению маркетолога — слишком технично для пользователя
                 add(ports.grpcApiResult)
                 add(ports.clashApiResult)
                 add(dns)
@@ -78,7 +82,8 @@ class ScanOrchestrator @Inject constructor(
 
             emit(ScanState(
                 vpnStatus     = vpnStatus,
-                alwaysVisible = buildAlwaysVisible(deviceInfo, iface.vpnInterfaces.firstOrNull()?.name),
+                alwaysVisible = buildAlwaysVisible(deviceInfo, iface.vpnInterfaces.firstOrNull()?.name,
+                    exitIpWorking, exitIpText),
                 fixable       = fixable,
                 deviceInfo    = deviceInfo,
                 isScanning    = false
@@ -86,25 +91,20 @@ class ScanOrchestrator @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
-    private fun buildAlwaysVisible(deviceInfo: DeviceInfo, primaryInterface: String?) = listOf(
+    private fun buildAlwaysVisible(
+        deviceInfo: DeviceInfo,
+        primaryInterface: String?,
+        exitIpWorking: Boolean,
+        exitIpText: String
+    ) = listOf(
         CheckResult.AlwaysVisible(
             id          = "transport_vpn",
             title       = "Факт VPN",
             explanation = "Android ядро выставляет этот флаг когда VPN активен. " +
                     "Любое приложение с одним разрешением ACCESS_NETWORK_STATE видит его. " +
-                    "Скрыть без root невозможно — это архитектура системы.",
-            knowsWhat   = "VPN активен · ${primaryInterface ?: "tun0"} · Android ${deviceInfo.androidVersion}",
+                    "Скрыть без root невозможно.",
+            knowsWhat   = "VPN активен · ${primaryInterface ?: "tun0"} · API ${deviceInfo.sdkInt}",
             doesntKnow  = "Какой сервер, куда, чьи ключи"
-        ),
-        CheckResult.AlwaysVisible(
-            id          = "interface_detail",
-            title       = "Сетевые интерфейсы",
-            explanation = "java.net.NetworkInterface доступен без разрешений. " +
-                    "Показывает все интерфейсы с именами и IP-адресами.",
-            knowsWhat   = deviceInfo.vpnInterfaces.joinToString(" · ") { iface ->
-                "${iface.name}: ${iface.addresses.joinToString(", ")}"
-            }.ifBlank { "Интерфейсы не определены" },
-            doesntKnow  = "Адрес VPN-сервера и ключи шифрования"
         ),
         CheckResult.AlwaysVisible(
             id          = "vpn_clients",
@@ -113,16 +113,18 @@ class ScanOrchestrator @Inject constructor(
                     "наличие конкретных пакетов без QUERY_ALL_PACKAGES.",
             knowsWhat   = if (deviceInfo.installedVpnClients.isEmpty()) "Не обнаружены"
                           else deviceInfo.installedVpnClients.joinToString(", "),
-            doesntKnow  = "Конфигурацию клиента"
+            doesntKnow  = "Конфигурацию и ключи клиента"
         ),
         CheckResult.AlwaysVisible(
             id          = "http_probing",
-            title       = "Доступность заблокированных сайтов",
-            explanation = "Если VPN работает — заблокированные сайты открываются. " +
-                    "Некоторые приложения проверяют это и делают вывод о наличии VPN. " +
-                    "Защититься от этого метода без отключения VPN невозможно.",
-            knowsWhat   = "Косвенный факт VPN через доступность сайтов",
-            doesntKnow  = "Какой именно VPN-сервер используется"
+            title       = "Заблокированные сайты",
+            explanation = "Если VPN маршрутизирует трафик — заблокированные сайты открываются. " +
+                    "Некоторые приложения проверяют это косвенно. Защититься без отключения VPN невозможно.",
+            // Реальный результат из ExitIpChecker — не хардкод
+            knowsWhat   = if (prefs.privacyModeEnabled) "Не проверено (включи автообновление)"
+                          else if (exitIpWorking) "Доступны · $exitIpText"
+                          else "Недоступны — VPN не маршрутизирует трафик",
+            doesntKnow  = "Какой именно сервер используется"
         )
     )
 }

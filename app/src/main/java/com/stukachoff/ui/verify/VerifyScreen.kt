@@ -1,6 +1,7 @@
 package com.stukachoff.ui.verify
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,11 +62,13 @@ fun VerifyScreen(
 
         if (state.fixable.isNotEmpty()) {
             item {
+                val hasIssues = state.fixable.any { it.status != CheckStatus.GREEN }
                 Text(
-                    "Можно защитить",
-                    style = MaterialTheme.typography.titleLarge,
+                    if (hasIssues) "Найдены уязвимости" else "Проверки",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                    color = if (hasIssues) Color(0xFFF44336) else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
                 )
             }
             items(state.fixable) { check ->
@@ -342,76 +345,75 @@ fun CheckCard(
     onLearnMore: (String) -> Unit,
     onRecheck: () -> Unit = {}
 ) {
-    val statusColor = when (check.status) {
-        CheckStatus.GREEN  -> Color(0xFF4CAF50)
-        CheckStatus.YELLOW -> Color(0xFFFF9800)
-        CheckStatus.RED    -> Color(0xFFF44336)
-    }
+    var expanded by remember { mutableStateOf(check.status == CheckStatus.RED) }
+
     val statusIcon = when (check.status) {
         CheckStatus.GREEN  -> "🟢"
         CheckStatus.YELLOW -> "🟡"
         CheckStatus.RED    -> "🔴"
     }
 
-    Card(
+    // Компактная строка — разворачивается по тапу
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp)
+            .clickable { if (check.requiresFix) expanded = !expanded }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isRechecking) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(statusIcon, fontSize = 20.sp)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    check.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                if (check.harmSeverity == HarmSeverity.CRITICAL && check.status == CheckStatus.RED) {
-                    Surface(
-                        color = Color(0xFFF44336),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            "Критично",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                // Кнопка повторной проверки
-                IconButton(
-                    onClick = onRecheck,
-                    enabled = !isRechecking,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "Проверить снова",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        if (isRechecking) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        } else {
+            Text(statusIcon, fontSize = 18.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            check.title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        if (check.harmSeverity == HarmSeverity.CRITICAL && check.status == CheckStatus.RED) {
+            Surface(
+                color = Color(0xFFF44336),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text("!", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
             }
+            Spacer(Modifier.width(4.dp))
+        }
+        IconButton(onClick = onRecheck, enabled = !isRechecking,
+            modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Default.Refresh, contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 
-            if (check.requiresFix) {
-                Spacer(Modifier.height(8.dp))
-                // Термины в тексте кликабельны — открывают глоссарий
-                GlossaryText(
-                    text  = check.harm,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Spacer(Modifier.height(4.dp))
-                TextButton(onClick = { onLearnMore(check.id) }) {
-                    Text("Как исправить →")
-                }
+    // Разворачиваемая детальная информация
+    AnimatedVisibility(visible = expanded && check.requiresFix) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 44.dp, end = 16.dp, bottom = 10.dp)
+        ) {
+            GlossaryText(
+                text  = check.harm,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(4.dp))
+            TextButton(
+                onClick = { onLearnMore(check.id) },
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("Как исправить →", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
+
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
 }

@@ -1,8 +1,11 @@
 package com.stukachoff.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
@@ -102,12 +105,29 @@ fun SettingsScreen(
         }
 
         item {
+            val ctx = LocalContext.current
             SettingsSection(title = "Открытый код") {
-                InfoCard(
-                    title = "github.com/ANova0/stukachoff",
-                    body  = "Код полностью открыт. Нет аналитических SDK, нет трекеров, " +
-                            "нет фоновых процессов. Можешь собрать самостоятельно и сравнить SHA-256."
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            ctx.startActivity(Intent(Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/ANova0/stukachoff")))
+                        }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("github.com/ANova0/stukachoff",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                        Text("Нет трекеров, нет аналитики. Собери сам и сравни SHA-256.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("→", color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
     }

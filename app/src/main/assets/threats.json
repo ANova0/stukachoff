@@ -7,8 +7,8 @@
       "threat_level": "red",
       "confirmed": true,
       "methods": ["transport_vpn", "http_probing", "plmn"],
-      "harm": "HTTP-пробы к заблокированным сайтам + код оператора SIM передаются через бинарный TCP-протокол в РКН",
-      "source": "ntc.party тред 22584, март 2026"
+      "harm": "Подтверждено: HTTP-пробы к заблокированным сайтам + код SIM-оператора передаются в РКН",
+      "source": "ntc.party #22584, март 2026"
     },
     {
       "package": "ru.vk.store",
@@ -16,7 +16,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Часть экосистемы VK, подпадает под те же требования РКН"
+      "harm": "Часть экосистемы VK, подпадает под требования РКН"
     },
     {
       "package": "ru.sberbankmobile",
@@ -24,23 +24,23 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Обязан внедрить детекцию к 15.04.2026 по требованию Минцифры"
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "com.idamob.tinkoff.android",
-      "name": "Т-Банк (Тинькофф)",
+      "name": "Т-Банк",
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Официально рекомендует отключить VPN при входе. Участник совещания Минцифры."
+      "harm": "Рекомендует отключить VPN при входе. Дедлайн 15.04.2026"
     },
     {
       "package": "ru.tinkoff.mvno",
-      "name": "Т-Мобайл (оператор от Т-Банк)",
+      "name": "Т-Мобайл",
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn", "plmn"],
-      "harm": "Мобильный оператор — имеет доступ к MCC/SIM и может коррелировать с IP"
+      "harm": "Мобильный оператор — код SIM может коррелировать с IP"
     },
     {
       "package": "com.wildberries.ru",
@@ -48,7 +48,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Нестабильная работа с VPN с 7 апреля 2026. Участник совещания Минцифры."
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "ru.ozon.app.android",
@@ -56,7 +56,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn", "localhost_scan"],
-      "harm": "Участник совещания Минцифры 28.03.2026, дедлайн 15.04.2026"
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "ru.vtb24.mobilebanking.android",
@@ -64,7 +64,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Пострадал от блокировок ТСПУ 3-4 апреля. Обязан внедрить детекцию к 15.04.2026"
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "com.avito.android",
@@ -72,7 +72,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Участник совещания Минцифры 28.03.2026, дедлайн 15.04.2026"
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "com.hh.android",
@@ -80,7 +80,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Обязан внедрить детекцию к 15.04.2026"
+      "harm": "Участник совещания Минцифры, дедлайн 15.04.2026"
     },
     {
       "package": "ru.yandex.searchplugin",
@@ -88,7 +88,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn", "http_probing"],
-      "harm": "Участник совещания Минцифры. Кинопоиск входит в экосистему Яндекса."
+      "harm": "Участник совещания Минцифры. Включает Кинопоиск."
     },
     {
       "package": "com.yandex.browser",
@@ -96,7 +96,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn", "http_probing"],
-      "harm": "Часть экосистемы Яндекса, подпадает под требования РКН"
+      "harm": "Часть экосистемы Яндекса"
     },
     {
       "package": "com.yandex.bank",
@@ -104,7 +104,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Банковское приложение Яндекса, подпадает под требования РКН"
+      "harm": "Банковское приложение Яндекса"
     },
     {
       "package": "ru.gosuslugi",
@@ -112,7 +112,7 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Государственный сервис — прямой доступ к данным пользователей, высокий риск"
+      "harm": "Государственный сервис с доступом к персональным данным"
     },
     {
       "package": "ru.gosuslugi.mob",
@@ -120,7 +120,15 @@
       "threat_level": "yellow",
       "confirmed": false,
       "methods": ["transport_vpn"],
-      "harm": "Государственный сервис — прямой доступ к данным пользователей, высокий риск"
+      "harm": "Государственный сервис с доступом к персональным данным"
+    },
+    {
+      "package": "ru.rostel",
+      "name": "Ростелеком",
+      "threat_level": "yellow",
+      "confirmed": false,
+      "methods": ["transport_vpn", "plmn"],
+      "harm": "Оператор связи с доступом к данным соединений"
     }
   ],
   "permission_risks": {
