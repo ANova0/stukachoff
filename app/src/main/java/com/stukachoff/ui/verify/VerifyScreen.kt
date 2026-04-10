@@ -224,9 +224,8 @@ fun VerifyScreen(
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                     Text(
-                        "Глубокий скан ищет открытые сервисы на всех портах (1-65535). " +
-                        "На каждом найденном порту пробуем gRPC handshake — если ответит, " +
-                        "читаем конфиг VPN.",
+                        "Сканирует ~3000 VPN-связанных портов. На каждом найденном " +
+                        "пробует gRPC handshake — если VPN API ответит, читает конфиг.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -237,7 +236,7 @@ fun VerifyScreen(
                     onClick = { viewModel.deepScan() },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    Text("🔍 Глубокое сканирование всех портов (1-65535)")
+                    Text("🔍 Глубокое сканирование VPN-портов (~3000)")
                 }
             }
         }
@@ -246,7 +245,7 @@ fun VerifyScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
-                    Text("Сканирую 65535 портов — это может занять 2-3 минуты...",
+                    Text("Сканирую ~3000 VPN-портов — около 30 секунд...",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("На каждом найденном порту пробуем gRPC handshake",
@@ -354,6 +353,8 @@ fun NotActiveMessage(onScan: () -> Unit = {}) {
 
 @Composable
 fun ActiveClientBanner(client: com.stukachoff.data.apps.ActiveClient) {
+    var showPicker by remember { mutableStateOf(false) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceVariant
@@ -370,16 +371,49 @@ fun ActiveClientBanner(client: com.stukachoff.data.apps.ActiveClient) {
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    buildString {
-                        append("${client.engine.name} · ${client.mode.name}")
-                        if (client.confidence < 80) append(" · точность: ${client.confidence}%")
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (client.confidence >= 80) {
+                    Text(
+                        "${client.engine.name} · ${client.mode.name}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        "Не удалось определить точно (${client.confidence}%)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFF9800)
+                    )
+                }
+            }
+            if (client.confidence < 80 && client.allInstalled.size > 1) {
+                TextButton(onClick = { showPicker = true }) {
+                    Text("Указать", fontSize = 12.sp)
+                }
             }
         }
+    }
+
+    // Диалог выбора клиента вручную
+    if (showPicker && client.allInstalled.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text("Какой VPN-клиент сейчас активен?") },
+            text = {
+                Column {
+                    client.allInstalled.forEach { name ->
+                        TextButton(
+                            onClick = { showPicker = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(name, modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Отмена") }
+            }
+        )
     }
 }
 

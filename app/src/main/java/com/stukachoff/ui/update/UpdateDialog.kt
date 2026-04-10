@@ -106,7 +106,16 @@ fun UpdateDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("✅ Файл проверен") },
                 text = {
-                    Text("SHA-256 совпадает. Файл подлинный. Нажми «Установить» чтобы продолжить.")
+                    Column {
+                        Text("SHA-256 совпадает. Файл подлинный.")
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "⚠️ Если при установке появится «конфликт пакетов» — " +
+                            "удали текущую версию вручную и установи новую.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(onClick = onInstall) { Text("Установить") }

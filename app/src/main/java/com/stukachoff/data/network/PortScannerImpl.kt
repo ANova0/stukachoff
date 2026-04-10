@@ -83,34 +83,54 @@ class PortScannerImpl : PortScanner {
     }
 
     /**
-     * Полное сканирование портов 1-65535.
-     * Разбито на чанки по 1000 чтобы не создавать 65k Deferred сразу.
-     * Таймаут 3 минуты на весь скан.
+     * Целевое сканирование VPN-связанных портов (~3000 портов вместо 65535).
+     * Сканирует: известные VPN-порты + системные + рандомную выборку.
+     * Завершается за 30-60 секунд вместо 3+ минут.
      */
     override suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
+        val targetPorts = buildSet {
+            // Известные VPN-порты (расширенный набор)
+            addAll(PortCategorizer.grpcPorts)
+            addAll(PortCategorizer.clashPorts)
+            addAll(PortCategorizer.proxyPorts)
+            // Системные порты 1-1024
+            addAll(1..1024)
+            // Расширенные xray/sing-box диапазоны
+            addAll(2330..2340)    // Hiddify/NekoBox
+            addAll(7888..7895)    // Clash
+            addAll(8000..8100)    // HTTP servers
+            addAll(9080..9100)    // Clash API
+            addAll(10080..10090)  // xray gRPC
+            addAll(10800..10815)  // v2rayNG
+            addAll(19080..19090)  // Marzban
+            addAll(23450..23460)  // Hiddify gRPC
+            addAll(62780..62800)  // xray альтернатив
+            // Популярные высокие порты
+            addAll(listOf(15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000))
+            // Рандомная выборка из оставшихся (1000 портов)
+            val random = java.util.Random(42)
+            repeat(1000) {
+                add(1025 + random.nextInt(64510))
+            }
+        }.sorted()
+
         val result = mutableListOf<OpenPort>()
         val semaphore = Semaphore(FULL_SCAN_CONCURRENCY)
 
-        try {
-            kotlinx.coroutines.withTimeout(180_000) { // 3 минуты max
-                val chunks = (1..65535).chunked(1000) // 66 чанков по 1000 портов
-                for (chunk in chunks) {
-                    val chunkResults = coroutineScope {
-                        chunk.map { port ->
-                            async {
-                                semaphore.withPermit {
-                                    if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))
-                                        OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
-                                    else null
-                                }
-                            }
-                        }.awaitAll().filterNotNull()
+        val chunks = targetPorts.chunked(500)
+        for (chunk in chunks) {
+            val chunkResults = coroutineScope {
+                chunk.map { port ->
+                    async {
+                        semaphore.withPermit {
+                            if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))
+                                OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
+                            else null
+                        }
                     }
-                    result.addAll(chunkResults)
-                }
+                }.awaitAll().filterNotNull()
             }
-        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
-            // Таймаут — возвращаем что нашли за 3 минуты
+            result.addAll(chunkResults)
         }
         result
     }

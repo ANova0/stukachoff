@@ -3,6 +3,8 @@ package com.stukachoff.ui.onboarding
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -163,13 +165,18 @@ fun OnboardingScreen(
 
 @Composable
 fun OnboardingPageContent(page: OnboardingPage) {
+    // Фиксированная верхняя часть — заголовок всегда на одной высоте
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(page.emoji, fontSize = 72.sp)
-        Spacer(Modifier.height(28.dp))
+        // Фиксированный отступ от верха — заголовки на одной высоте
+        Spacer(Modifier.height(40.dp))
+        Text(page.emoji, fontSize = 64.sp)
+        Spacer(Modifier.height(20.dp))
         Text(
             page.title,
             style = MaterialTheme.typography.headlineSmall,
@@ -177,12 +184,13 @@ fun OnboardingPageContent(page: OnboardingPage) {
             textAlign = TextAlign.Center,
             color = page.accent
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
         Text(
             page.body,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Start,
-            lineHeight = 24.sp
+            lineHeight = 22.sp
         )
+        Spacer(Modifier.height(32.dp))
     }
 }
