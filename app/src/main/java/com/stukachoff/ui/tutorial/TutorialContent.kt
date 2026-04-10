@@ -123,9 +123,20 @@ val VULNERABILITY_FIXES: Map<String, VulnerabilityFix> = mapOf(
 )
 
 val TSPU_ADVICE: Map<VpnEngine, TsupAdvice> = mapOf(
+    VpnEngine.XRAY to TsupAdvice(
+        problem  = "Все VLESS-клиенты имеют критическую уязвимость: SOCKS5-прокси на localhost без пароля",
+        solution = "Лучшая защита — Cloudflare WARP обёртка поверх VPN",
+        steps    = listOf(
+            "Любое приложение может подключиться к прокси напрямую и узнать IP сервера",
+            "TUN-режим закрывает порт, но xray API может оставаться доступным",
+            "Рабочий профиль (Knox/Shelter) НЕ защищает — loopback общий",
+            "Попроси провайдера добавить WARP-обёртку в конфиг",
+            "С WARP стукач увидит IP Cloudflare, а не реального сервера"
+        )
+    ),
     VpnEngine.WIREGUARD to TsupAdvice(
         problem  = "WireGuard блокируется ТСПУ с декабря 2025 по UDP handshake сигнатуре",
-        solution = "Переключись на AmneziaWG — это WireGuard с шифрованием служебных пакетов",
+        solution = "Попроси провайдера дать AmneziaWG конфиг",
         steps    = listOf(
             "Скачай AmneziaVPN или AmneziaWG из Google Play",
             "Попроси провайдера предоставить AmneziaWG конфиг",

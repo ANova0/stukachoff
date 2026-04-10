@@ -133,11 +133,15 @@ fun VerifyScreen(
                             Text("Очевидных уязвимостей не найдено",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold)
-                            Text("${state.fixable.size} проверок пройдены. Для полной оценки ТСПУ уточни протокол у провайдера.",
+                            Text("${state.fixable.size} проверок пройдены",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                }
+                // Зелёные проверки — компактно, с (?) для глоссария
+                items(state.fixable) { check ->
+                    GreenCheckRow(check = check, onExplain = onLearnMore)
                 }
             }
         }
@@ -598,6 +602,54 @@ fun InfoRow(label: String, value: String) {
 }
 
 // Краткие описания проверок для глоссария (?)
+/**
+ * Компактная строка для GREEN проверок — показывает (?) для глоссария
+ */
+@Composable
+fun GreenCheckRow(check: CheckResult.Fixable, onExplain: (String) -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("🟢", fontSize = 12.sp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            check.title,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(
+            onClick = { showDialog = true },
+            contentPadding = PaddingValues(2.dp),
+            modifier = Modifier.size(24.dp)
+        ) {
+            Text("?", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary)
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(check.title) },
+            text = {
+                Text(
+                    checkExplanations[check.id] ?: check.harm,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Понятно") }
+            }
+        )
+    }
+}
+
 private val checkExplanations = mapOf(
     "vpn_works"    to "Реальная проверка работы VPN — делаем HTTPS-запрос через туннель и смотрим какой IP видит внешний мир.",
     "grpc_api"     to "gRPC API — служебный порт xray (10085). Если открыт без пароля — любое приложение читает IP сервера, UUID и ключи.",
@@ -608,7 +660,8 @@ private val checkExplanations = mapOf(
     "system_proxy" to "Системный прокси — если VPN-клиент работает в режиме прокси, его адрес виден всем приложениям.",
     "work_profile" to "Изоляция профилей — Knox, Shelter или Island создают отдельный профиль. VPN в изолированном профиле труднее обнаружить.",
     "android_version" to "Android 10+ закрывает /proc/net/ через SELinux. На старых версиях любое приложение видит все TCP-соединения.",
-    "exit_ip"      to "Exit IP — реальный IP через который твой трафик выходит в интернет. Если VPN работает — это IP VPN-сервера."
+    "exit_ip"      to "Exit IP — реальный IP через который твой трафик выходит в интернет. Если VPN работает — это IP VPN-сервера.",
+    "proxy_mode"   to "SOCKS5/HTTP прокси открыт на localhost. Любое приложение подключается к нему напрямую, обходя VPN-туннель, и узнаёт IP сервера. Рабочий профиль НЕ защищает."
 )
 
 @Composable

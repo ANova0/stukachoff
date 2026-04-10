@@ -140,8 +140,25 @@ class ScanOrchestrator @Inject constructor(
                     )
                 } else iface.mtuResult
                 add(mtuCheck)
+                // SOCKS5 прокси на localhost — КРИТИЧЕСКАЯ уязвимость
+                // Любое приложение подключается к прокси, обходит VpnService,
+                // и определяет реальный IP VPN-сервера
+                if (ports.proxyModeResult.status == CheckStatus.RED) {
+                    add(ports.proxyModeResult.copy(
+                        title = "Локальный прокси без защиты",
+                        harm  = "SOCKS5/HTTP прокси открыт на localhost без аутентификации. " +
+                                "Любое приложение-стукач подключится к нему напрямую, " +
+                                "обойдёт VPN-туннель и узнает реальный IP сервера.",
+                        harmSeverity = HarmSeverity.CRITICAL
+                    ))
+                }
                 add(SystemProxyAnalyzer.check())
-                add(workResult.check)
+                // Work Profile НЕ защищает от доступа к localhost
+                add(workResult.check.let { wp ->
+                    if (wp.status == CheckStatus.GREEN) wp.copy(
+                        harm = (wp.harm ?: "") + " (⚠️ loopback не изолирован — приложения из основного профиля видят прокси)"
+                    ) else wp
+                })
                 add(splitTunnel)
             }.sortedByDescending { it.harmSeverity.ordinal }
 
