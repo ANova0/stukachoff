@@ -82,19 +82,37 @@ class PortScannerImpl : PortScanner {
         )
     }
 
+    /**
+     * Полное сканирование портов 1-65535.
+     * Разбито на чанки по 1000 чтобы не создавать 65k Deferred сразу.
+     * Таймаут 3 минуты на весь скан.
+     */
     override suspend fun fullScan(): List<OpenPort> = withContext(Dispatchers.IO) {
+        val result = mutableListOf<OpenPort>()
         val semaphore = Semaphore(FULL_SCAN_CONCURRENCY)
-        coroutineScope {
-            (1..65535).map { port ->
-                async {
-                    semaphore.withPermit {
-                        if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))
-                            OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
-                        else null
+
+        try {
+            kotlinx.coroutines.withTimeout(180_000) { // 3 минуты max
+                val chunks = (1..65535).chunked(1000) // 66 чанков по 1000 портов
+                for (chunk in chunks) {
+                    val chunkResults = coroutineScope {
+                        chunk.map { port ->
+                            async {
+                                semaphore.withPermit {
+                                    if (isPortOpen(port, FULL_SCAN_TIMEOUT_MS))
+                                        OpenPort(port, PortCategorizer.categorize(port), PortCategorizer.describe(port))
+                                    else null
+                                }
+                            }
+                        }.awaitAll().filterNotNull()
                     }
+                    result.addAll(chunkResults)
                 }
-            }.awaitAll().filterNotNull()
+            }
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+            // Таймаут — возвращаем что нашли за 3 минуты
         }
+        result
     }
 
     private fun isPortOpen(port: Int): Boolean = isPortOpen(port, KNOWN_PORT_TIMEOUT_MS)

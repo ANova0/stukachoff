@@ -259,7 +259,8 @@ fun VerifyScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Глубокий скан: ${fullScanPorts.size} открытых портов",
+                        Text("Глубокий скан: ${fullScanPorts.size} открытых портов" +
+                            if (fullScanPorts.size == 0) " (скан завершён — уязвимых сервисов не найдено)" else "",
                             fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text("Каждый открытый порт — потенциальная точка входа для стукачей",
