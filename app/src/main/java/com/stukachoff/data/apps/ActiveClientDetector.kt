@@ -185,6 +185,8 @@ object ActiveClientDetector {
         )
     }
 
+    fun baseTsupPublic(engine: VpnEngine, mtu: Int) = baseTsup(engine, mtu)
+
     private fun baseTsup(engine: VpnEngine, mtu: Int): com.stukachoff.domain.model.TsupLevel = when {
         engine == VpnEngine.AMNEZIA                              -> com.stukachoff.domain.model.TsupLevel.HIGH
         engine == VpnEngine.TOR                                  -> com.stukachoff.domain.model.TsupLevel.HIGH
@@ -202,8 +204,11 @@ class ActiveClientCheckerImpl @Inject constructor(
 ) {
     /**
      * Определяет активный VPN-клиент.
-     * НЕ использует getRunningAppProcesses (мёртв на Android 13+).
-     * Вместо этого: installed packages + interface + MTU + ports.
+     * Сигналы (по приоритету):
+     * 1. Settings.Secure.always_on_vpn_app (если настроен)
+     * 2. Единственный установленный VPN-клиент
+     * 3. Уникальные порты (2334=Hiddify, 10808=v2rayNG)
+     * 4. Interface + MTU (wg0=WireGuard, MTU 1376=Amnezia)
      */
     suspend fun detect(
         primaryInterface: String?,
@@ -211,6 +216,31 @@ class ActiveClientCheckerImpl @Inject constructor(
         openPorts: List<OpenPort>,
         installedVpnPackages: List<String>
     ): ActiveClient = withContext(Dispatchers.IO) {
+        // Пробуем Settings.Secure.always_on_vpn_app — самый надёжный сигнал
+        val alwaysOnPkg = runCatching {
+            android.provider.Settings.Secure.getString(
+                context.contentResolver, "always_on_vpn_app"
+            )
+        }.getOrNull()
+
+        val alwaysOnEntry = alwaysOnPkg?.let { ActiveClientDetector.PACKAGE_ENGINE[it] }
+
+        if (alwaysOnEntry != null) {
+            // Точно знаем какой клиент — always-on VPN
+            return@withContext ActiveClient(
+                packageName        = alwaysOnPkg,
+                displayName        = alwaysOnEntry.second,
+                engine             = alwaysOnEntry.first,
+                mode               = if (openPorts.any { it.category == PortCategory.SOCKS5 }) VpnMode.SOCKS5
+                                     else VpnMode.TUN,
+                confidence         = 99,
+                tsupResistanceBase = ActiveClientDetector.baseTsupPublic(alwaysOnEntry.first, mtu),
+                allInstalled       = installedVpnPackages.mapNotNull {
+                    ActiveClientDetector.PACKAGE_ENGINE[it]?.second
+                }
+            )
+        }
+
         ActiveClientDetector.classify(
             primaryInterface ?: "tun0", mtu, installedVpnPackages, openPorts
         )

@@ -149,7 +149,7 @@ fun AutoUpdateToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Включить автообновление",
+            Text("Сетевой режим",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f))
             Switch(
@@ -163,8 +163,8 @@ fun AutoUpdateToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            if (enabled) "В данном режиме агент Стукачёв будет делать сетевые запросы"
-            else "Только локальные проверки — никаких сетевых запросов",
+            if (enabled) "Включено: проверка exit IP через туннель + автообновление с GitHub"
+            else "Выключено: только локальные проверки, ни один запрос не уходит в сеть",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -58,9 +58,37 @@ fun VerifyScreen(
             item { CorporateVpnMessage() }
         }
 
-        // === 2. Активный клиент (компактно) ===
+        // === 2. Активный клиент + WARP индикатор ===
         state.activeClient?.let { client ->
             item { ActiveClientBanner(client) }
+        }
+
+        // WARP обёртка — важная информация, показываем отдельно
+        val exitIpResult = state.fixable.find { it.id == "vpn_works" }
+        if (exitIpResult?.harm?.contains("WARP") == true) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF4CAF50).copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🛡️", fontSize = 20.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text("WARP обёртка активна",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4CAF50))
+                            Text("Реальный IP сервера скрыт за Cloudflare",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
         }
 
         // === 3. Вердикт (главное — сразу видно) ===
@@ -102,10 +130,10 @@ fun VerifyScreen(
                         Text("✅", fontSize = 24.sp)
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("Проблем не обнаружено",
+                            Text("Очевидных уязвимостей не найдено",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold)
-                            Text("${state.fixable.size} проверок пройдены",
+                            Text("${state.fixable.size} проверок пройдены. Для полной оценки ТСПУ уточни протокол у провайдера.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

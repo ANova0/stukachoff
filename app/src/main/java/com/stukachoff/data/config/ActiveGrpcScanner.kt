@@ -34,6 +34,13 @@ class ActiveGrpcScanner @Inject constructor(
     private val xrayConfigReader: XrayConfigReader
 ) {
     private val KNOWN_GRPC_PORTS = setOf(10085, 19085, 23456)
+    // Расширенный набор портов для активного зондажа (помимо found ports)
+    private val EXTENDED_GRPC_PORTS = setOf(
+        10085, 19085, 23456,                // Стандартные xray gRPC
+        10086, 10087, 8001, 62789, 8080,    // Альтернативные xray
+        2023, 2024, 2025, 2026,             // Общие
+        15000, 20000, 30000, 40000, 50000   // Высокие порты
+    )
 
     private val probeClient = OkHttpClient.Builder()
         .protocols(listOf(Protocol.H2_PRIOR_KNOWLEDGE))
@@ -49,8 +56,32 @@ class ActiveGrpcScanner @Inject constructor(
     )
 
     /**
-     * Пробуем gRPC handshake на всех открытых портах.
-     * Возвращает первый порт который ответил + прочитанный конфиг.
+     * Быстрый зондаж — пробуем gRPC на расширенном списке портов + все найденные.
+     * Вызывается при обычном скане (не deep scan).
+     */
+    suspend fun quickProbe(knownOpenPorts: List<OpenPort>): GrpcScanResult? = withContext(Dispatchers.IO) {
+        // Пробуем расширенный список gRPC портов напрямую (TCP connect + gRPC handshake)
+        for (port in EXTENDED_GRPC_PORTS) {
+            val config = tryGrpcOnPort(port)
+            if (config != null) return@withContext GrpcScanResult(
+                port = port, isKnownPort = port in KNOWN_GRPC_PORTS,
+                config = config, respondedToGrpc = true
+            )
+        }
+        // Затем пробуем все найденные порты
+        for (port in knownOpenPorts.filter { it.port !in EXTENDED_GRPC_PORTS }) {
+            val config = tryGrpcOnPort(port.port)
+            if (config != null) return@withContext GrpcScanResult(
+                port = port.port, isKnownPort = false,
+                config = config, respondedToGrpc = true
+            )
+        }
+        null
+    }
+
+    /**
+     * Полный зондаж — пробуем gRPC на ВСЕХ переданных портах.
+     * Вызывается после deep scan.
      */
     suspend fun scanAllPorts(openPorts: List<OpenPort>): GrpcScanResult? = withContext(Dispatchers.IO) {
         if (openPorts.isEmpty()) return@withContext null

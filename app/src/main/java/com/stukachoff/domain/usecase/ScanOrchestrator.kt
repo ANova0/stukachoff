@@ -99,8 +99,8 @@ class ScanOrchestrator @Inject constructor(
                 installedVpnPackages = instPkgs
             )
 
-            // FIX-15: Активное чтение конфига — пробуем gRPC на ВСЕХ найденных портах
-            val grpcScanResult = activeGrpcScanner.scanAllPorts(ports.openKnownPorts)
+            // FIX-15: Активное чтение конфига — quickProbe на расширенном списке + найденных
+            val grpcScanResult = activeGrpcScanner.quickProbe(ports.openKnownPorts)
             val vpnConfig = grpcScanResult?.config
 
             // Clash config как fallback если gRPC не нашёлся
@@ -131,7 +131,15 @@ class ScanOrchestrator @Inject constructor(
                 add(ports.grpcApiResult)
                 add(ports.clashApiResult)
                 add(dns)
-                add(iface.mtuResult)
+                // MTU: для Amnezia нестандартный MTU — это ЗАЩИТА, не уязвимость
+                val mtuCheck = if (activeClient.engine == com.stukachoff.data.apps.VpnEngine.AMNEZIA &&
+                    iface.mtuResult.status != CheckStatus.GREEN) {
+                    iface.mtuResult.copy(
+                        status = CheckStatus.GREEN,
+                        harm = "MTU ${iface.vpnInterfaces.firstOrNull()?.mtu ?: "?"} — часть защиты AmneziaWG (нестандартный MTU затрудняет детект)"
+                    )
+                } else iface.mtuResult
+                add(mtuCheck)
                 add(SystemProxyAnalyzer.check())
                 add(workResult.check)
                 add(splitTunnel)
