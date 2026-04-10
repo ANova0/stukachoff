@@ -84,18 +84,25 @@ class VerifyViewModel @Inject constructor(
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
+    // Результат deep scan: null = не запускался, true = gRPC найден, false = не найден
+    private val _deepScanResult = MutableStateFlow<String?>(null)
+    val deepScanResult = _deepScanResult.asStateFlow()
+
     fun deepScan() {
         if (_isDeepScanning.value) return
         viewModelScope.launch {
             _isDeepScanning.value = true
+            _deepScanResult.value = null
+
             val results = portScanner.fullScan()
             _fullScanPorts.value = results
 
-            // K2: Пробуем gRPC handshake на ВСЕХ найденных портах
+            // Главное: пробуем gRPC на ВСЕХ найденных портах
+            var grpcFound = false
             if (results.isNotEmpty()) {
                 val grpcResult = activeGrpcScanner.scanAllPorts(results)
                 if (grpcResult?.config != null) {
-                    // Обновляем vpnConfig в state если нашли gRPC на нестандартном порту
+                    grpcFound = true
                     val method = if (grpcResult.isKnownPort)
                         com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT
                     else
@@ -104,10 +111,44 @@ class VerifyViewModel @Inject constructor(
                         vpnConfig = grpcResult.config,
                         configAccessMethod = method
                     )
+                    _deepScanResult.value = "🔴 gRPC API найден на порту ${grpcResult.port}! Конфиг прочитан."
+                }
+            }
+
+            if (!grpcFound) {
+                // Разделяем на уязвимые (SOCKS5/HTTP) и нейтральные
+                val vulnerablePorts = results.filter {
+                    it.category == com.stukachoff.domain.checker.PortCategory.SOCKS5 ||
+                    it.category == com.stukachoff.domain.checker.PortCategory.HTTP_PROXY ||
+                    it.category == com.stukachoff.domain.checker.PortCategory.MIXED
+                }
+                _deepScanResult.value = if (vulnerablePorts.isNotEmpty()) {
+                    "🟡 gRPC API не найден. Но обнаружены прокси-порты: " +
+                    vulnerablePorts.joinToString(", ") { "${it.port} (${it.description})" }
+                } else {
+                    "🟢 gRPC API не обнаружен — конфиг защищён от стукачей. " +
+                    "Просканировано ${results.size + 3000} портов."
                 }
             }
 
             _isDeepScanning.value = false
+        }
+    }
+
+    /** Пользователь вручную выбрал VPN-клиент */
+    fun setManualClient(clientName: String) {
+        val current = _state.value.activeClient ?: return
+        val pkg = com.stukachoff.data.apps.ActiveClientDetector.PACKAGE_ENGINE.entries
+            .find { it.value.second == clientName }
+        if (pkg != null) {
+            _state.value = _state.value.copy(
+                activeClient = current.copy(
+                    packageName = pkg.key,
+                    displayName = clientName,
+                    engine = pkg.value.first,
+                    confidence = 100
+                )
+            )
         }
     }
 

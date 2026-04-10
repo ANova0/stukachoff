@@ -64,16 +64,24 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun installApk(apkFile: File) {
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            apkFile
-        )
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apkFile
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // FileProvider или Intent не сработал — предлагаем скачать вручную
+            _state.value = UpdateUiState.Error(
+                "Не удалось установить: ${e.message}\n\n" +
+                "Скачай APK вручную: github.com/ANova0/stukachoff/releases"
+            )
         }
-        context.startActivity(intent)
     }
 
     fun resetState() {

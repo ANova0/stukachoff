@@ -41,14 +41,23 @@ val BASE_STEPS = listOf(
         )
     ),
     TutorialStep(
-        title = "Шаг 2: Все приложения через VPN",
-        description = "Если часть приложений идёт мимо VPN (split-tunnel), они делают " +
-                "HTTP-запросы напрямую и могут определить что у тебя VPN по доступности заблокированных сайтов.",
+        title = "Шаг 2: Раздельное туннелирование",
+        description = "Рекомендуемая настройка: заблокированные сервисы (YouTube, Telegram, Instagram) — " +
+                "через VPN. Российские приложения-стукачи (VK, Сбер, Ozon) — в обход VPN.\n\n" +
+                "Так стукачи не могут подтвердить VPN через HTTP-пробы к заблокированным сайтам.",
         instructions = mapOf(
-            "Hiddify"    to "Настройки → Маршрутизация → Route all traffic",
-            "v2rayNG"    to "Настройки → Per-app proxy → отключить или выбрать Proxy All",
-            "NekoBox"    to "Route all apps through proxy",
-            "V2Box"      to "Настройки → Routing → All traffic",
+            "Hiddify"    to "Настройки → Маршрутизация → Прокси для приложений.\n" +
+                    "Слева вверху выбери метод:\n" +
+                    "  • VPN — весь трафик перехватывается, выбранные исключаются\n" +
+                    "  • Прокси — только отмеченные приложения идут через VPN\n" +
+                    "Ниже отметь YouTube, Telegram, Instagram.\n" +
+                    "НЕ отмечай VK, Сбер, Ozon, Wildberries.",
+            "v2rayNG"    to "Настройки → Per-app proxy → включить.\n" +
+                    "Отметь только приложения которым нужен VPN " +
+                    "(YouTube, Telegram). Неотмеченные идут напрямую.",
+            "NekoBox"    to "Настройки → Per-app proxy → режим белого списка.\n" +
+                    "Выбери приложения для VPN.",
+            "V2Box"      to "Настройки → Routing → Per-app → выбрать приложения",
             "WireGuard"  to "Конфигурация туннеля → AllowedIPs = 0.0.0.0/0, ::/0",
             "AmneziaWG"  to "Конфигурация → AllowedIPs = 0.0.0.0/0, ::/0",
             "AmneziaVPN" to "Настройки → Маршрутизировать весь трафик"
