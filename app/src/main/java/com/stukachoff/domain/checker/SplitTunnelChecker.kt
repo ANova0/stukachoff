@@ -14,15 +14,6 @@ import javax.inject.Singleton
 
 enum class SplitTunnelStatus { FULL_TUNNEL, SPLIT_TUNNEL, UNKNOWN }
 
-/**
- * Определяет реальный split-tunnel.
- *
- * ВАЖНО: На Android WiFi-сеть ВСЕГДА видна рядом с VPN —
- * это НЕ split-tunnel. Split-tunnel = когда VPN НЕ является
- * дефолтной сетью (activeNetwork ≠ VPN).
- *
- * Правильная проверка: activeNetwork = VPN → full tunnel.
- */
 object SplitTunnelClassifier {
     fun classify(activeNetworkIsVpn: Boolean, vpnExists: Boolean): SplitTunnelStatus = when {
         vpnExists && activeNetworkIsVpn  -> SplitTunnelStatus.FULL_TUNNEL
@@ -38,18 +29,16 @@ class SplitTunnelCheckerImpl @Inject constructor(
     suspend fun check(): CheckResult.Fixable = withContext(Dispatchers.IO) {
         val cm = context.getSystemService(ConnectivityManager::class.java)
             ?: return@withContext CheckResult.Fixable(
-                id = "split_tunnel", title = "Все приложения через VPN",
+                id = "split_tunnel", title = "Раздельное туннелирование",
                 status = CheckStatus.GREEN, harm = "Статус не определён",
                 harmSeverity = HarmSeverity.INFO
             )
 
-        // Есть ли VPN-сеть вообще
         val vpnExists = cm.allNetworks.any { network ->
             cm.getNetworkCapabilities(network)
                 ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
         }
 
-        // Является ли VPN дефолтной сетью (activeNetwork)
         val activeNetwork = cm.activeNetwork
         val activeIsVpn = activeNetwork?.let { network ->
             cm.getNetworkCapabilities(network)
@@ -58,24 +47,29 @@ class SplitTunnelCheckerImpl @Inject constructor(
 
         val status = SplitTunnelClassifier.classify(activeIsVpn, vpnExists)
 
+        // Для пользователей в РФ:
+        // Split-tunnel (русские приложения мимо VPN) — РЕКОМЕНДУЕМАЯ настройка
+        // Full tunnel — стукачи через HTTP-пробы подтверждают VPN
         CheckResult.Fixable(
             id           = "split_tunnel",
-            title        = "Все приложения через VPN",
+            title        = "Раздельное туннелирование",
             status       = when (status) {
-                SplitTunnelStatus.FULL_TUNNEL  -> CheckStatus.GREEN
-                SplitTunnelStatus.SPLIT_TUNNEL -> CheckStatus.YELLOW
+                SplitTunnelStatus.SPLIT_TUNNEL -> CheckStatus.GREEN
+                SplitTunnelStatus.FULL_TUNNEL  -> CheckStatus.YELLOW
                 SplitTunnelStatus.UNKNOWN      -> CheckStatus.GREEN
             },
             harm         = when (status) {
-                SplitTunnelStatus.FULL_TUNNEL ->
-                    "VPN — дефолтная сеть. Весь трафик через туннель."
                 SplitTunnelStatus.SPLIT_TUNNEL ->
-                    "VPN не является дефолтной сетью — часть приложений может идти мимо туннеля."
+                    "Раздельное туннелирование включено — рекомендуемая настройка. " +
+                    "Российские приложения идут мимо VPN и не могут подтвердить его через HTTP-пробы."
+                SplitTunnelStatus.FULL_TUNNEL ->
+                    "Весь трафик через VPN. Стукачи (VK, Сбер) тоже идут через туннель — " +
+                    "они могут делать HTTP-пробы к заблокированным сайтам и подтвердить наличие VPN."
                 SplitTunnelStatus.UNKNOWN ->
                     "Статус маршрутизации не определён"
             },
             harmSeverity = when (status) {
-                SplitTunnelStatus.SPLIT_TUNNEL -> HarmSeverity.HIGH
+                SplitTunnelStatus.FULL_TUNNEL -> HarmSeverity.MEDIUM
                 else -> HarmSeverity.INFO
             }
         )

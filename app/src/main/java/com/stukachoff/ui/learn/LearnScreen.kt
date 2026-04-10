@@ -224,18 +224,19 @@ val learnContent = mapOf(
         )
     ),
     "split_tunnel" to LearnContent(
-        title = "Все приложения через VPN",
-        what = "Часть приложений идёт мимо VPN-туннеля (split-tunnel). " +
-                "Приложения в bypass делают запросы напрямую — могут определить VPN " +
-                "по доступности заблокированных сайтов.",
-        harm = "VK, Сбер и другие приложения в bypass детектируют VPN через HTTP-пробы.",
+        title = "Раздельное туннелирование",
+        what = "Если весь трафик идёт через VPN (full tunnel), то приложения-стукачи " +
+                "(VK, Сбер, Ozon) тоже проходят через туннель. Они делают HTTP-пробы " +
+                "к заблокированным сайтам — сайты доступны → стукач подтверждает VPN.\n\n" +
+                "Рекомендуемая настройка: российские приложения идут мимо VPN (split-tunnel). " +
+                "Тогда HTTP-пробы стукачей идут напрямую → сайты заблокированы → стукач не может подтвердить VPN.",
+        harm = "При full tunnel стукачи подтверждают VPN через HTTP-пробы к заблокированным сайтам.",
         fixes = listOf(
-            ClientFix("Hiddify", "Настройки → Маршрутизация → Route all traffic"),
-            ClientFix("v2rayNG", "Настройки → Per-app proxy → отключить"),
-            ClientFix("NekoBox", "Route all apps through proxy"),
-            ClientFix("WireGuard", "AllowedIPs = 0.0.0.0/0, ::/0"),
-            ClientFix("AmneziaWG", "AllowedIPs = 0.0.0.0/0, ::/0"),
-            ClientFix("Поддержка", "Попросите провайдера настроить полную маршрутизацию в конфиге")
+            ClientFix("Hiddify", "Настройки → Маршрутизация → Раздельная маршрутизация (RU direct, остальное proxy)"),
+            ClientFix("v2rayNG", "Настройки → Per-app proxy → исключить российские приложения"),
+            ClientFix("NekoBox", "Routing → Российские IP/домены direct, остальное proxy"),
+            ClientFix("AmneziaVPN", "Настройки → Раздельное туннелирование → включить"),
+            ClientFix("Поддержка", "Попроси провайдера настроить маршрутизацию: RU → direct, остальное → proxy")
         )
     ),
     "vpn_works" to LearnContent(
