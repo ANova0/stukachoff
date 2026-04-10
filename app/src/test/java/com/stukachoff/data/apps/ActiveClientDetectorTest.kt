@@ -39,12 +39,13 @@ class ActiveClientDetectorTest {
     }
 
     @Test
-    fun `multiple xray clients with no ports shows combined names`() {
+    fun `multiple xray clients with no ports shows Один из`() {
         val installed = listOf("app.hiddify.com", "dev.hexasoftware.v2box")
         val result = ActiveClientDetector.classify("tun0", 1500, installed, emptyList())
+        assertTrue(result.displayName.startsWith("Один из:"))
         assertTrue(result.displayName.contains("Hiddify"))
         assertTrue(result.displayName.contains("V2Box"))
-        assertEquals(50, result.confidence)
+        assertEquals(40, result.confidence)
     }
 
     @Test

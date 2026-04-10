@@ -73,12 +73,13 @@ fun VerifyScreen(
             val issues = state.fixable.filter { it.status != CheckStatus.GREEN }
 
             if (issues.isNotEmpty()) {
+                val hasRed = issues.any { it.status == CheckStatus.RED }
                 item {
                     Text(
-                        "Найдены уязвимости",
+                        if (hasRed) "Найдены уязвимости" else "Рекомендации",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFF44336),
+                        color = if (hasRed) Color(0xFFF44336) else Color(0xFFFF9800),
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
                 }

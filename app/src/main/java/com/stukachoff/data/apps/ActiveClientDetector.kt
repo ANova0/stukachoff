@@ -159,17 +159,17 @@ object ActiveClientDetector {
                            else engineByMtu.name
                 Triple(name, engineByMtu, 75)
             }
-            // Несколько xray-клиентов, tun0, нет портов → перечисляем
+            // Несколько клиентов, tun0, нет портов → "один из:"
             else -> {
                 val xrayClients = installedClients.filter {
                     it.first == VpnEngine.XRAY || it.first == VpnEngine.SINGBOX
                 }
                 if (xrayClients.isNotEmpty()) {
-                    val name = xrayClients.joinToString(" / ") { it.second }
-                    Triple(name, VpnEngine.XRAY, 50)
+                    val names = xrayClients.joinToString(", ") { it.second }
+                    Triple("Один из: $names", VpnEngine.XRAY, 40)
                 } else {
-                    val all = installedClients.joinToString(" / ") { it.second }
-                    Triple(all.ifBlank { "VPN" }, VpnEngine.OTHER, 30)
+                    val names = installedClients.joinToString(", ") { it.second }
+                    Triple(names.ifBlank { "VPN" }, VpnEngine.OTHER, 30)
                 }
             }
         }

@@ -14,11 +14,19 @@ import javax.inject.Singleton
 
 enum class SplitTunnelStatus { FULL_TUNNEL, SPLIT_TUNNEL, UNKNOWN }
 
-// Pure logic — testable without Android framework
+/**
+ * Определяет реальный split-tunnel.
+ *
+ * ВАЖНО: На Android WiFi-сеть ВСЕГДА видна рядом с VPN —
+ * это НЕ split-tunnel. Split-tunnel = когда VPN НЕ является
+ * дефолтной сетью (activeNetwork ≠ VPN).
+ *
+ * Правильная проверка: activeNetwork = VPN → full tunnel.
+ */
 object SplitTunnelClassifier {
-    fun classify(vpnNetworkCount: Int, nonVpnNetworkCount: Int): SplitTunnelStatus = when {
-        vpnNetworkCount > 0 && nonVpnNetworkCount == 0 -> SplitTunnelStatus.FULL_TUNNEL
-        vpnNetworkCount > 0 && nonVpnNetworkCount > 0  -> SplitTunnelStatus.SPLIT_TUNNEL
+    fun classify(activeNetworkIsVpn: Boolean, vpnExists: Boolean): SplitTunnelStatus = when {
+        vpnExists && activeNetworkIsVpn  -> SplitTunnelStatus.FULL_TUNNEL
+        vpnExists && !activeNetworkIsVpn -> SplitTunnelStatus.SPLIT_TUNNEL
         else -> SplitTunnelStatus.UNKNOWN
     }
 }
@@ -30,39 +38,39 @@ class SplitTunnelCheckerImpl @Inject constructor(
     suspend fun check(): CheckResult.Fixable = withContext(Dispatchers.IO) {
         val cm = context.getSystemService(ConnectivityManager::class.java)
             ?: return@withContext CheckResult.Fixable(
-                id = "split_tunnel", title = "Маршрутизация (Split-Tunnel)",
+                id = "split_tunnel", title = "Все приложения через VPN",
                 status = CheckStatus.GREEN, harm = "Статус не определён",
                 harmSeverity = HarmSeverity.INFO
             )
 
-        val allNetworks = cm.allNetworks
-        val vpnCount = allNetworks.count { network ->
+        // Есть ли VPN-сеть вообще
+        val vpnExists = cm.allNetworks.any { network ->
             cm.getNetworkCapabilities(network)
                 ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
         }
-        val nonVpnCount = allNetworks.count { network ->
-            val caps = cm.getNetworkCapabilities(network) ?: return@count false
-            !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
-            (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-        }
 
-        val status = SplitTunnelClassifier.classify(vpnCount, nonVpnCount)
+        // Является ли VPN дефолтной сетью (activeNetwork)
+        val activeNetwork = cm.activeNetwork
+        val activeIsVpn = activeNetwork?.let { network ->
+            cm.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        } ?: false
+
+        val status = SplitTunnelClassifier.classify(activeIsVpn, vpnExists)
 
         CheckResult.Fixable(
             id           = "split_tunnel",
             title        = "Все приложения через VPN",
             status       = when (status) {
-                SplitTunnelStatus.FULL_TUNNEL -> CheckStatus.GREEN
+                SplitTunnelStatus.FULL_TUNNEL  -> CheckStatus.GREEN
                 SplitTunnelStatus.SPLIT_TUNNEL -> CheckStatus.YELLOW
-                SplitTunnelStatus.UNKNOWN      -> CheckStatus.GREEN // assume full if unknown
+                SplitTunnelStatus.UNKNOWN      -> CheckStatus.GREEN
             },
             harm         = when (status) {
                 SplitTunnelStatus.FULL_TUNNEL ->
-                    "Весь трафик идёт через VPN-туннель"
+                    "VPN — дефолтная сеть. Весь трафик через туннель."
                 SplitTunnelStatus.SPLIT_TUNNEL ->
-                    "Split-tunnel активен — часть приложений идёт мимо VPN. " +
-                    "Приложения в bypass могут делать HTTP-пробы напрямую и детектировать VPN."
+                    "VPN не является дефолтной сетью — часть приложений может идти мимо туннеля."
                 SplitTunnelStatus.UNKNOWN ->
                     "Статус маршрутизации не определён"
             },

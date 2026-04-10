@@ -51,7 +51,7 @@ class TsupAssessor @Inject constructor() {
                 ProtectionLevel.HIGH to "Tor — максимальная анонимность"
             activeClient.engine == VpnEngine.XRAY || activeClient.engine == VpnEngine.SINGBOX ->
                 ProtectionLevel.MEDIUM to
-                    "${activeClient.displayName} — зависит от протокола провайдера"
+                    "${activeClient.displayName} — конфиг защищён, для точной оценки уточни протокол у провайдера"
             activeClient.engine == VpnEngine.WIREGUARD ->
                 ProtectionLevel.LOW to "WireGuard блокируется ТСПУ с декабря 2025"
             activeClient.engine == VpnEngine.OPENVPN ->

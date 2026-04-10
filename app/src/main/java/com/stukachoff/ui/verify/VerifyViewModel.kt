@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
 import android.content.Intent
+import com.stukachoff.data.config.ActiveGrpcScanner
 import com.stukachoff.data.export.ReportExporter
 import com.stukachoff.data.network.DnsCheckerImpl
 import com.stukachoff.data.network.ExitIpChecker
@@ -35,7 +36,8 @@ class VerifyViewModel @Inject constructor(
     private val exitIpChecker: ExitIpChecker,
     private val androidVersionChecker: AndroidVersionChecker,
     private val dnsChecker: DnsCheckerImpl,
-    private val reportExporter: ReportExporter
+    private val reportExporter: ReportExporter,
+    private val activeGrpcScanner: ActiveGrpcScanner
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ScanState())
@@ -88,6 +90,23 @@ class VerifyViewModel @Inject constructor(
             _isDeepScanning.value = true
             val results = portScanner.fullScan()
             _fullScanPorts.value = results
+
+            // K2: Пробуем gRPC handshake на ВСЕХ найденных портах
+            if (results.isNotEmpty()) {
+                val grpcResult = activeGrpcScanner.scanAllPorts(results)
+                if (grpcResult?.config != null) {
+                    // Обновляем vpnConfig в state если нашли gRPC на нестандартном порту
+                    val method = if (grpcResult.isKnownPort)
+                        com.stukachoff.domain.model.ConfigAccessMethod.KNOWN_PORT
+                    else
+                        com.stukachoff.domain.model.ConfigAccessMethod.ACTIVE_PROBE
+                    _state.value = _state.value.copy(
+                        vpnConfig = grpcResult.config,
+                        configAccessMethod = method
+                    )
+                }
+            }
+
             _isDeepScanning.value = false
         }
     }
