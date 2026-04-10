@@ -69,6 +69,15 @@
         <package android:name="com.yandex.bank" />
         <package android:name="ru.kinopoisk" />
         <package android:name="com.kinopoisk.app" />
+        <package android:name="ru.yandex.yandexmaps" />
+        <package android:name="com.vk.video" />
+        <package android:name="ru.yandex.music" />
+        <package android:name="ru.alfabank.mobile.android" />
+        <package android:name="ru.ok.android" />
+        <package android:name="ru.rutube.app" />
+        <package android:name="com.vk.music" />
+        <package android:name="ru.beru.android" />
+        <package android:name="ru.samokat.app" />
         <package android:name="ru.gosuslugi" />
         <package android:name="ru.gosuslugi.mob" />
         <package android:name="com.mts.mtsbankonline" />

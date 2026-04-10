@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-09",
+  "version": "2026-04-10",
   "known_apps": [
     {
       "package": "com.vk.vkclient",
@@ -9,14 +9,6 @@
       "methods": ["transport_vpn", "http_probing", "plmn"],
       "harm": "Подтверждено: HTTP-пробы к заблокированным сайтам + код SIM-оператора передаются в РКН",
       "source": "ntc.party #22584, март 2026"
-    },
-    {
-      "package": "ru.vk.store",
-      "name": "VK Store",
-      "threat_level": "yellow",
-      "confirmed": false,
-      "methods": ["transport_vpn"],
-      "harm": "Часть экосистемы VK, подпадает под требования РКН"
     },
     {
       "package": "ru.sberbankmobile",
@@ -121,6 +113,96 @@
       "confirmed": false,
       "methods": ["transport_vpn"],
       "harm": "Государственный сервис с доступом к персональным данным"
+    },
+    {
+      "package": "ru.yandex.yandexmaps",
+      "name": "Яндекс Карты",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "http_probing"],
+      "harm": "Подтверждено RKS Global: отправляет VPN-статус на сервер",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "com.vk.video",
+      "name": "VK Видео",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: детектирует и отправляет VPN-статус",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.yandex.music",
+      "name": "Яндекс Музыка",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: отправляет VPN-статус на сервер",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.alfabank.mobile.android",
+      "name": "Альфа-Банк",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: банковские приложения — самая агрессивная группа",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.ok.android",
+      "name": "Одноклассники",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: отправляет VPN-статус на сервер",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.rutube.app",
+      "name": "Rutube",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: поведенческая биометрия + VPN-статус",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "com.vk.music",
+      "name": "VK Музыка",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: отправляет VPN-статус на сервер",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.beru.android",
+      "name": "MegaMarket",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: отправляет VPN-статус на сервер",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.samokat.app",
+      "name": "Самокат",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn"],
+      "harm": "Подтверждено RKS Global: детектирует VPN",
+      "source": "RKS Global, апрель 2026"
+    },
+    {
+      "package": "ru.vk.store",
+      "name": "RuStore",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "package_scan"],
+      "harm": "Подтверждено RKS Global: точная геолокация + список всех приложений",
+      "source": "RKS Global, апрель 2026"
     }
   ],
   "permission_risks": {
