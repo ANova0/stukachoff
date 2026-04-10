@@ -18,7 +18,7 @@ import com.stukachoff.ui.common.GlossaryText
 
 // TODO: загружать из ContentRepository (threats.json) в следующих задачах
 // Имя Telegram-бота для deep link — замени на реальный username
-private const val BOT_USERNAME = "YOUR_BOT_NAME"
+private const val BOT_USERNAME = "AgentStukachev_bot"
 private const val BOT_DEEP_LINK_BASE = "https://t.me/$BOT_USERNAME?start=stukachoff_fix_"
 
 @OptIn(ExperimentalMaterial3Api::class)

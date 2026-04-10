@@ -139,6 +139,15 @@ fun AboutScreen(onBack: () -> Unit) {
                         }
                     )
                     LinkRow(
+                        icon  = "🤖",
+                        title = "Telegram-бот",
+                        url   = "t.me/AgentStukachev_bot",
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW,
+                                Uri.parse("https://t.me/AgentStukachev_bot")))
+                        }
+                    )
+                    LinkRow(
                         icon  = "🐛",
                         title = "Сообщить о проблеме",
                         url   = "github.com/ANova0/stukachoff/issues",
