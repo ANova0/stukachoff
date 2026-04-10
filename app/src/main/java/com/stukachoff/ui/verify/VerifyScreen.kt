@@ -34,6 +34,7 @@ fun VerifyScreen(
     val state by viewModel.state.collectAsState()
     val showScanning by viewModel.showScanning.collectAsState()
     val recheckingId by viewModel.recheckingId.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val isDeepScanning by viewModel.isDeepScanning.collectAsState()
     val fullScanPorts by viewModel.fullScanPorts.collectAsState()
 
@@ -94,6 +95,36 @@ fun VerifyScreen(
         // === 3. Вердикт (главное — сразу видно) ===
         state.overallVerdict?.let { verdict ->
             item { OverallVerdictCard(verdict = verdict) }
+        }
+
+        // === 3b. Баннер о режиме проверки ===
+        if (state.fixable.isNotEmpty()) {
+            item {
+                val prefs = remember {
+                    context.getSharedPreferences("stukachoff_prefs", android.content.Context.MODE_PRIVATE)
+                }
+                val isPrivacyMode = prefs.getBoolean("privacy_mode_enabled", true)
+                if (isPrivacyMode) {
+                    Surface(
+                        color = Color(0xFF2196F3).copy(alpha = 0.08f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Text(
+                                "ℹ️ Проверка в защищённом режиме (без интернета)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "Для более точных результатов включи Сетевой режим в Меню, " +
+                                "выполни глубокое сканирование портов и повтори проверку.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // === 4. Проблемы (RED/YELLOW) или "Всё ок" ===
@@ -212,9 +243,16 @@ fun VerifyScreen(
         }
         if (isDeepScanning) {
             item {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-                Text("Сканирую все порты...", modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodySmall)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(8.dp))
+                    Text("Сканирую 65535 портов — это может занять 2-3 минуты...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("На каждом найденном порту пробуем gRPC handshake",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         if (fullScanPorts.isNotEmpty()) {

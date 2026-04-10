@@ -58,7 +58,21 @@ class DnsCheckerImpl @Inject constructor(
         }
 
         if (hasVpnNetwork) {
-            // VPN есть, но DNS идёт НЕ через VPN-сеть → утечка
+            // VPN есть, но наше приложение идёт НЕ через VPN
+            // Это нормально при раздельном туннелировании (Stukachoff в bypass)
+            val isLocalDns = dnsServers.any { it.startsWith("192.168.") || it.startsWith("10.") }
+            if (isLocalDns) {
+                // Локальный DNS (роутер) = наше приложение в bypass = раздельное туннелирование
+                return@withContext CheckResult.Fixable(
+                    id           = "dns_leak",
+                    title        = "DNS через основную сеть",
+                    status       = CheckStatus.GREEN,
+                    harm         = "Stukachoff идёт мимо VPN (раздельное туннелирование). " +
+                                   "DNS: ${dnsServers.joinToString(", ")} — это нормально. " +
+                                   "Другие приложения через VPN используют свой DNS.",
+                    harmSeverity = HarmSeverity.INFO
+                )
+            }
             return@withContext CheckResult.Fixable(
                 id           = "dns_leak",
                 title        = "DNS-утечка",
