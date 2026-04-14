@@ -35,7 +35,9 @@ class PermissionAnalyzer @Inject constructor(
 ) {
     // Список пакетов которые проверяем на опасные разрешения
     private val watchedPackages = listOf(
-        "com.vk.vkclient", "ru.vk.store",
+        "com.vk.vkclient", "com.vkontakte.android", "com.vk.android",
+        "com.max.app", "com.vk.im",
+        "ru.vk.store",
         "ru.sberbankmobile",
         "com.idamob.tinkoff.android", "ru.tinkoff.mvno",
         "com.wildberries.ru",

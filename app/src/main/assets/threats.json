@@ -3,12 +3,46 @@
   "known_apps": [
     {
       "package": "com.vk.vkclient",
-      "name": "VK Max / ВКонтакте",
+      "name": "VK (старый)",
       "threat_level": "red",
       "confirmed": true,
       "methods": ["transport_vpn", "http_probing", "plmn"],
-      "harm": "Подтверждено: HTTP-пробы к заблокированным сайтам + код SIM-оператора передаются в РКН",
+      "harm": "HTTP-пробы + код SIM передаются в РКН",
       "source": "ntc.party #22584, март 2026"
+    },
+    {
+      "package": "com.vkontakte.android",
+      "name": "ВКонтакте",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "http_probing", "plmn"],
+      "harm": "HTTP-пробы + код SIM передаются в РКН",
+      "source": "ntc.party #22584, март 2026"
+    },
+    {
+      "package": "com.vk.android",
+      "name": "VK",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "http_probing", "plmn"],
+      "harm": "HTTP-пробы + код SIM передаются в РКН"
+    },
+    {
+      "package": "com.max.app",
+      "name": "MAX (мессенджер)",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "http_probing", "plmn"],
+      "harm": "Подтверждено RKS Global: обфусцирует VPN-детекцию. Шпионский модуль.",
+      "source": "ntc.party #22584, RKS Global"
+    },
+    {
+      "package": "com.vk.im",
+      "name": "MAX / VK Мессенджер",
+      "threat_level": "red",
+      "confirmed": true,
+      "methods": ["transport_vpn", "http_probing"],
+      "harm": "Обфусцирует VPN-детекцию"
     },
     {
       "package": "ru.sberbankmobile",

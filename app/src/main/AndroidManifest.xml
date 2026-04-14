@@ -55,6 +55,10 @@
 
         <!-- Известные приложения-детекторы -->
         <package android:name="com.vk.vkclient" />
+        <package android:name="com.vkontakte.android" />
+        <package android:name="com.vk.android" />
+        <package android:name="com.max.app" />
+        <package android:name="com.vk.im" />
         <package android:name="ru.vk.store" />
         <package android:name="ru.sberbankmobile" />
         <package android:name="com.idamob.tinkoff.android" />

@@ -24,9 +24,17 @@ class AppThreatAnalyzer @Inject constructor(
 
             packageInfo ?: return@mapNotNull null
 
+            // Определяем: предустановлено или пользователь установил
+            val isSystemApp = try {
+                val appInfo = pm.getApplicationInfo(entry.packageName, 0)
+                (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            } catch (_: Exception) { false }
+
+            val displayName = if (isSystemApp) "${entry.name} (предустановлено)" else entry.name
+
             AppThreat(
                 packageName      = entry.packageName,
-                appName          = entry.name,
+                appName          = displayName,
                 version          = packageInfo.versionName,
                 threatLevel      = entry.threatLevel,
                 isInstalled      = true,
